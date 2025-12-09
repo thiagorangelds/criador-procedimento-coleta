@@ -4,6 +4,7 @@ import json
 import logging
 import logging.handlers
 import os
+import time
 
 
 CONFIG_FILE = "config.json"
@@ -78,8 +79,11 @@ def main():
         if not os.path.exists(OUTPUT_DIR):
             os.makedirs(OUTPUT_DIR)
 
-        nome_arquivo_procedimento = f"{OUTPUT_DIR}/procedimento_{nome_base}.txt"
-        nome_arquivo_catalogo = f"{OUTPUT_DIR}/catalogo_{nome_base}.txt"
+        if not os.path.exists(f"{OUTPUT_DIR}/{nome_base}"):
+            os.makedirs(f"{OUTPUT_DIR}/{nome_base}")
+
+        nome_arquivo_procedimento = f"{OUTPUT_DIR}/{nome_base}/procedimento_{nome_base}.txt"
+        nome_arquivo_catalogo = f"{OUTPUT_DIR}/{nome_base}/catalogo_{nome_base}.txt"
         
         prompt = f'''
             Tecnologia-Alvo: {tecnologia}
@@ -156,6 +160,9 @@ Campos do catálogo de dados: Nome do Campo Original (na ferramenta), Nome do ca
             logger.error(f"Erro na API ao processar '{tecnologia}'. Detalhe: {e}")
         except Exception as e:
             logger.error(f"Ocorreu um erro inesperado ao processar '{tecnologia}': {e}")
+        
+        
+        time.sleep(15)
             
     logger.info("Execução concluída.")
 
