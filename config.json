@@ -1,5 +1,10 @@
 {
     "API_KEY": "",
+    "RETRY": 5,
+    "MODELOS": [
+        "gemini-2.5-flash",
+        "gemini-2.0-flash"
+    ],
     "TECNOLOGIAS": [
         ""
     ]
