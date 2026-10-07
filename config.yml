@@ -1,0 +1,24 @@
+# Chave da API do Gemini.
+API_KEY: ""
+
+# Tentativas por modelo em caso de limite de taxa ou indisponibilidade da API.
+RETRY: 5
+
+# Modelos do Gemini, em ordem de preferência (fallback).
+MODELOS:
+  - gemini-2.5-flash
+  - gemini-2.0-flash
+
+# Tecnologias para as quais os procedimentos serão gerados.
+TECNOLOGIAS:
+  - "Fortinet Fortigate"
+
+# Formato do documento de Procedimento de Coleta: "docx" (padrão) ou "pdf".
+# Para gerar em "pdf" é necessário ter o LibreOffice instalado.
+FORMATO_SAIDA: docx
+
+# (Opcional, só para "pdf") Caminho do executável do LibreOffice, caso não esteja no PATH.
+# LIBREOFFICE: /opt/libreoffice/program/soffice
+
+# (Opcional) Modelo Word usado no documento de Procedimento de Coleta.
+# MODELO_DOCX: templates/modelo_procedimento_coleta.docx
