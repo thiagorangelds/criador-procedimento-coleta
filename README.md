@@ -61,10 +61,11 @@ python interface.py
 
 Abre no navegador (`http://127.0.0.1:8765/`) um formulário com todas as opções do `config.yml`. Lá é possível:
 
-- **Salvar configuração:** grava os campos no `config.yml`.
-- **Gerar documentos:** salva e inicia a geração, com o log acompanhado em tempo real.
-- **Cancelar:** interrompe a geração antes da próxima tecnologia.
-- **Arquivos gerados:** baixa os documentos de `procedimentos/`.
+- **Gerar documentos:** salva a configuração e inicia a geração das tecnologias informadas, com o andamento em tempo real.
+- **Parar geração:** interrompe a geração antes da próxima tecnologia.
+- **Configuração:** API key, formato, modelos e demais opções; **Salvar configuração** grava no `config.yml`.
+- **Modelos do Gemini:** escolha, entre os modelos Flash do free tier, quais usar e em que ordem (fallback). Com a API key informada, a lista vem da API do Gemini; sem ela, ou se a consulta falhar, é usada uma lista padrão.
+- **Documentos gerados:** baixa os arquivos de `procedimentos/`.
 
 Opções: `--porta <n>` para usar outra porta e `--sem-navegador` para não abrir o navegador automaticamente. A interface só aceita conexões da própria máquina e não precisa de nenhuma dependência além das do `requirements.txt`.
 

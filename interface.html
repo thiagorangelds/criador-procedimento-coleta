@@ -7,7 +7,7 @@
 <style>
   :root {
     --bg: #f4f6f8;
-    --card: #ffffff;
+    --surface: #ffffff;
     --text: #1f2933;
     --muted: #5f6b7a;
     --border: #d7dde4;
@@ -17,22 +17,23 @@
     --ok: #2e7d32;
     --log-bg: #10161d;
     --log-text: #d6e2ec;
+    --log-erro: #ff8a80;
+    --log-aviso: #ffd54f;
     --input-bg: #ffffff;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #11161c;
-      --card: #1a2129;
+      --bg: #141a20;
+      --surface: #1c242d;
       --text: #e3e9ef;
       --muted: #9aa7b4;
-      --border: #2d3742;
+      --border: #2f3a46;
       --accent: #26c6da;
-      --accent-text: #0b1a1d;
+      --accent-text: #08262b;
       --danger: #ef5350;
       --ok: #66bb6a;
-      --log-bg: #0b0f14;
-      --log-text: #d6e2ec;
-      --input-bg: #141a21;
+      --log-bg: #0d1217;
+      --input-bg: #161d24;
     }
   }
   * { box-sizing: border-box; }
@@ -42,21 +43,25 @@
     color: var(--text);
     font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
-  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 20px; }
-  .card {
-    background: var(--card);
+  main { max-width: 880px; margin: 0 auto; padding: 32px 16px 56px; }
+  h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 24px; max-width: 64ch; }
+  h2 { font-size: 17px; margin: 0; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .principal {
+    background: var(--surface);
     border: 1px solid var(--border);
+    border-top: 4px solid var(--accent);
     border-radius: 10px;
     padding: 20px;
-    margin-bottom: 16px;
   }
-  h2 { font-size: 16px; margin: 0 0 14px; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
-  label { display: block; font-weight: 600; margin-bottom: 4px; }
+  .principal label { font-size: 17px; }
+  #TECNOLOGIAS { min-height: 150px; font-size: 16px; }
+
+  label, legend { display: block; font-weight: 600; margin-bottom: 4px; padding: 0; }
   .hint { display: block; color: var(--muted); font-size: 13px; font-weight: 400; margin-top: 4px; }
+  .opcional { color: var(--muted); font-weight: 400; }
   input[type=text], input[type=password], input[type=number], textarea {
     width: 100%;
     padding: 8px 10px;
@@ -66,151 +71,272 @@
     color: var(--text);
     font: inherit;
   }
-  textarea { min-height: 120px; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; }
-  input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-  .linha { display: flex; gap: 8px; }
-  .linha input { flex: 1; }
-  .radios { display: flex; gap: 20px; padding-top: 4px; }
+  textarea { min-height: 96px; resize: vertical; }
+  input:focus-visible, textarea:focus-visible { outline-offset: -1px; }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  .radios { display: flex; gap: 20px; padding-top: 2px; }
   .radios label { font-weight: 400; display: flex; gap: 6px; align-items: center; margin: 0; }
-  details summary { cursor: pointer; font-weight: 600; margin-bottom: 12px; }
-  .campo { margin-bottom: 16px; }
-  .campo:last-child { margin-bottom: 0; }
+  .linha { display: flex; gap: 8px; }
+  .linha input { flex: 1; min-width: 0; }
+
   button {
     font: inherit;
     font-weight: 600;
     padding: 9px 18px;
     border-radius: 6px;
     border: 1px solid var(--border);
-    background: var(--card);
+    background: var(--surface);
     color: var(--text);
     cursor: pointer;
   }
   button.primario { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
   button.perigo { color: var(--danger); border-color: var(--danger); }
   button:disabled { opacity: .5; cursor: not-allowed; }
-  .acoes { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .acoes { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
   .mensagem { font-size: 14px; }
   .mensagem.erro { color: var(--danger); }
   .mensagem.ok { color: var(--ok); }
   .mensagem ul { margin: 0; padding-left: 18px; }
+
+  .configuracao { margin-top: 16px; border-bottom: 1px solid var(--border); }
+  .configuracao summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
+  .configuracao summary span { color: var(--muted); font-weight: 400; }
+  .campos { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; padding: 4px 0 20px; }
+  .campos .acoes { grid-column: 1 / -1; margin-top: 0; }
+  @media (max-width: 720px) { .campos { grid-template-columns: 1fr; } }
+
+  .modelos { grid-column: 1 / -1; }
+  #modelos-selecionados { margin: 8px 0 0; padding-left: 24px; }
+  #modelos-selecionados li { padding: 4px 0; }
+  #modelos-selecionados li::marker { color: var(--muted); }
+  .item-modelo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .item-modelo .nome { flex: 1; min-width: 160px; }
+  .item-modelo button { padding: 3px 10px; font-size: 13px; font-weight: 500; }
+  .fora { color: var(--muted); font-size: 13px; }
+  .sem-modelos { color: var(--danger); font-size: 14px; list-style: none; margin-left: -24px; }
+  .seletor { margin-top: 10px; }
+  .seletor summary { cursor: pointer; color: var(--accent); font-weight: 600; width: fit-content; }
+  .seletor-painel {
+    margin-top: 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    padding: 10px 12px;
+  }
+  .opcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 16px; }
+  .opcoes label { font-weight: 400; display: flex; gap: 8px; align-items: center; margin: 0; }
+  .seletor-rodape { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; }
+  .seletor-rodape .hint { margin: 0; }
+  .seletor-rodape button { padding: 5px 12px; font-size: 13px; }
+
+  section.bloco { margin-top: 32px; }
+  .cabecalho { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
   .ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-  .status.ativo .ponto { background: var(--accent); animation: pulso 1s infinite; }
+  .status.ativo { color: var(--text); }
+  .status.ativo .ponto { background: var(--accent); animation: pulso 1.2s ease-in-out infinite; }
   @keyframes pulso { 50% { opacity: .3; } }
-  .cabecalho-log { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .cabecalho-log h2 { margin: 0; }
-  pre#log {
+  @media (prefers-reduced-motion: reduce) { .status.ativo .ponto { animation: none; } }
+  #log {
     margin: 0;
     background: var(--log-bg);
     color: var(--log-text);
     border-radius: 6px;
     padding: 12px;
-    height: 280px;
+    height: 260px;
     overflow: auto;
-    font-size: 13px;
+    font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
     white-space: pre-wrap;
     word-break: break-word;
   }
-  .log-erro { color: #ff8a80; }
-  .log-aviso { color: #ffd54f; }
+  .log-erro { color: var(--log-erro); }
+  .log-aviso { color: var(--log-aviso); }
+  .tabela { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
   th { color: var(--muted); font-weight: 600; }
   td.num { white-space: nowrap; color: var(--muted); }
   a { color: var(--accent); }
-  .vazio { color: var(--muted); font-size: 14px; }
-  .tabela { overflow-x: auto; }
+  .vazio { color: var(--muted); font-size: 14px; margin: 0; }
 </style>
 </head>
 <body>
 <main>
   <h1>Procedimento de Coleta</h1>
-  <p class="sub">Configure e gere os documentos de coleta de logs. As alterações são gravadas no <code>config.yml</code>.</p>
+  <p class="sub">Gere os documentos de coleta de logs de cada tecnologia. A configuração fica salva para as próximas vezes.</p>
 
   <form id="form" autocomplete="off">
-    <section class="card">
-      <h2>Configuração</h2>
-      <div class="grid">
-        <div>
-          <div class="campo">
-            <label for="API_KEY">API Key do Gemini</label>
-            <div class="linha">
-              <input type="password" id="API_KEY" spellcheck="false">
-              <button type="button" id="mostrar-chave">Mostrar</button>
-            </div>
-          </div>
-          <div class="campo">
-            <label>Formato do Procedimento de Coleta</label>
-            <div class="radios">
-              <label><input type="radio" name="FORMATO_SAIDA" value="docx"> DOCX</label>
-              <label><input type="radio" name="FORMATO_SAIDA" value="pdf"> PDF</label>
-            </div>
-            <span class="hint">Para gerar em PDF é necessário ter o LibreOffice instalado.</span>
-          </div>
-          <div class="campo" id="campo-libreoffice">
-            <label for="LIBREOFFICE">Executável do LibreOffice <span class="hint" style="display:inline">(opcional)</span></label>
-            <input type="text" id="LIBREOFFICE" placeholder="Detectado automaticamente se estiver no PATH" spellcheck="false">
-          </div>
-        </div>
-        <div class="campo">
-          <label for="TECNOLOGIAS">Tecnologias</label>
-          <textarea id="TECNOLOGIAS" placeholder="Fortinet FortiGate&#10;Microsoft Active Directory" spellcheck="false"></textarea>
-          <span class="hint">Uma tecnologia por linha.</span>
-        </div>
-      </div>
-
-      <details>
-        <summary>Avançado</summary>
-        <div class="grid">
-          <div class="campo">
-            <label for="MODELOS">Modelos do Gemini</label>
-            <textarea id="MODELOS" spellcheck="false" style="min-height:90px"></textarea>
-            <span class="hint">Um por linha, em ordem de preferência (fallback).</span>
-          </div>
-          <div>
-            <div class="campo">
-              <label for="RETRY">Tentativas por modelo</label>
-              <input type="number" id="RETRY" min="1" max="20">
-              <span class="hint">Em caso de limite de taxa ou indisponibilidade da API.</span>
-            </div>
-            <div class="campo">
-              <label for="MODELO_DOCX">Modelo Word <span class="hint" style="display:inline">(opcional)</span></label>
-              <input type="text" id="MODELO_DOCX" spellcheck="false">
-            </div>
-          </div>
-        </div>
-      </details>
-    </section>
-
-    <section class="card">
+    <div class="principal">
+      <label for="TECNOLOGIAS">Tecnologias</label>
+      <textarea id="TECNOLOGIAS" placeholder="Fortinet FortiGate&#10;Microsoft Active Directory" spellcheck="false" aria-describedby="dica-tecnologias"></textarea>
+      <span class="hint" id="dica-tecnologias">Uma por linha. Cada tecnologia gera o documento completo e o Procedimento de Coleta.</span>
       <div class="acoes">
         <button type="submit" class="primario" id="gerar">Gerar documentos</button>
-        <button type="button" id="salvar">Salvar configuração</button>
-        <button type="button" class="perigo" id="cancelar" hidden>Cancelar</button>
+        <button type="button" class="perigo" id="cancelar" hidden>Parar geração</button>
         <div class="mensagem" id="mensagem" role="status"></div>
       </div>
-    </section>
+    </div>
+
+    <details class="configuracao" id="configuracao">
+      <summary>Configuração <span id="resumo-config"></span></summary>
+      <div class="campos">
+        <div>
+          <label for="API_KEY">API key do Gemini</label>
+          <div class="linha">
+            <input type="password" id="API_KEY" spellcheck="false">
+            <button type="button" id="mostrar-chave" aria-pressed="false" aria-label="Mostrar API key">Mostrar</button>
+          </div>
+        </div>
+        <fieldset>
+          <legend>Formato do Procedimento de Coleta</legend>
+          <div class="radios">
+            <label><input type="radio" name="FORMATO_SAIDA" value="docx"> DOCX</label>
+            <label><input type="radio" name="FORMATO_SAIDA" value="pdf"> PDF</label>
+          </div>
+          <span class="hint">PDF precisa do LibreOffice instalado.</span>
+        </fieldset>
+        <div id="campo-libreoffice">
+          <label for="LIBREOFFICE">Executável do LibreOffice <span class="opcional">(opcional)</span></label>
+          <input type="text" id="LIBREOFFICE" placeholder="Detectado automaticamente se estiver no PATH" spellcheck="false">
+        </div>
+        <div>
+          <label for="MODELO_DOCX">Modelo Word <span class="opcional">(opcional)</span></label>
+          <input type="text" id="MODELO_DOCX" spellcheck="false">
+        </div>
+        <fieldset class="modelos">
+          <legend>Modelos do Gemini, em ordem de uso</legend>
+          <span class="hint" id="dica-modelos">O primeiro é usado sempre. Se ele atingir o limite ou ficar indisponível, o próximo da lista assume.</span>
+          <ol id="modelos-selecionados" aria-describedby="dica-modelos"></ol>
+          <details class="seletor" id="seletor-modelos">
+            <summary>Escolher modelos do free tier</summary>
+            <div class="seletor-painel">
+              <div id="opcoes-modelos" class="opcoes"></div>
+              <div class="seletor-rodape">
+                <span class="hint" id="origem-modelos"></span>
+                <button type="button" id="atualizar-modelos">Atualizar lista</button>
+              </div>
+            </div>
+          </details>
+        </fieldset>
+        <div>
+          <label for="RETRY">Tentativas por modelo</label>
+          <input type="number" id="RETRY" min="1" max="20" aria-describedby="dica-retry">
+          <span class="hint" id="dica-retry">Quando a API recusa por limite de uso ou indisponibilidade.</span>
+        </div>
+        <div class="acoes">
+          <button type="button" id="salvar">Salvar configuração</button>
+        </div>
+      </div>
+    </details>
   </form>
 
-  <section class="card">
-    <div class="cabecalho-log">
-      <h2>Execução</h2>
-      <span class="status" id="status"><span class="ponto"></span><span id="status-texto">Parado</span></span>
+  <section class="bloco" aria-labelledby="titulo-andamento">
+    <div class="cabecalho">
+      <h2 id="titulo-andamento">Andamento</h2>
+      <span class="status" id="status"><span class="ponto" aria-hidden="true"></span><span id="status-texto">Parado</span></span>
     </div>
-    <pre id="log" aria-live="polite"></pre>
+    <pre id="log" role="log" tabindex="0" aria-label="Log da geração"></pre>
   </section>
 
-  <section class="card">
-    <h2>Arquivos gerados</h2>
-    <div id="arquivos" class="tabela"><p class="vazio">Nenhum arquivo gerado ainda.</p></div>
+  <section class="bloco" aria-labelledby="titulo-documentos">
+    <div class="cabecalho">
+      <h2 id="titulo-documentos">Documentos gerados</h2>
+    </div>
+    <div id="arquivos" class="tabela"></div>
   </section>
 </main>
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const campos = ["API_KEY", "TECNOLOGIAS", "MODELOS", "RETRY", "LIBREOFFICE", "MODELO_DOCX"];
+  const VAZIO = "Os documentos aparecem aqui depois que você clicar em Gerar documentos.";
   let proximaLinha = 0;
   let acompanhando = false;
+  let modelosSelecionados = [];
+  let modelosDisponiveis = [];
+
+  function botao(texto, rotulo, acao, desabilitado) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = texto;
+    b.setAttribute("aria-label", rotulo);
+    b.disabled = !!desabilitado;
+    b.addEventListener("click", acao);
+    return b;
+  }
+
+  function moverModelo(indice, deslocamento) {
+    const destino = indice + deslocamento;
+    [modelosSelecionados[indice], modelosSelecionados[destino]] = [modelosSelecionados[destino], modelosSelecionados[indice]];
+    renderizarModelos();
+  }
+
+  function alternarModelo(nome, habilitar) {
+    modelosSelecionados = modelosSelecionados.filter((m) => m !== nome);
+    if (habilitar) modelosSelecionados.push(nome);
+    renderizarModelos();
+  }
+
+  function renderizarModelos() {
+    const lista = $("modelos-selecionados");
+    lista.replaceChildren();
+    if (!modelosSelecionados.length) {
+      const li = document.createElement("li");
+      li.className = "sem-modelos";
+      li.textContent = "Nenhum modelo habilitado. Escolha ao menos um abaixo.";
+      lista.appendChild(li);
+    }
+    modelosSelecionados.forEach((nome, i) => {
+      const li = document.createElement("li");
+      const linha = document.createElement("div");
+      linha.className = "item-modelo";
+      const rotulo = document.createElement("span");
+      rotulo.className = "nome";
+      rotulo.textContent = nome;
+      if (modelosDisponiveis.length && !modelosDisponiveis.includes(nome)) {
+        const fora = document.createElement("span");
+        fora.className = "fora";
+        fora.textContent = " (fora da lista do free tier)";
+        rotulo.appendChild(fora);
+      }
+      linha.append(
+        rotulo,
+        botao("Subir", `Subir ${nome}`, () => moverModelo(i, -1), i === 0),
+        botao("Descer", `Descer ${nome}`, () => moverModelo(i, 1), i === modelosSelecionados.length - 1),
+        botao("Remover", `Remover ${nome}`, () => alternarModelo(nome, false)),
+      );
+      li.appendChild(linha);
+      lista.appendChild(li);
+    });
+
+    const opcoes = $("opcoes-modelos");
+    opcoes.replaceChildren();
+    const todos = [...modelosDisponiveis, ...modelosSelecionados.filter((m) => !modelosDisponiveis.includes(m))];
+    todos.forEach((nome) => {
+      const label = document.createElement("label");
+      const caixa = document.createElement("input");
+      caixa.type = "checkbox";
+      caixa.checked = modelosSelecionados.includes(nome);
+      caixa.addEventListener("change", () => alternarModelo(nome, caixa.checked));
+      label.append(caixa, document.createTextNode(nome));
+      opcoes.appendChild(label);
+    });
+  }
+
+  async function carregarModelos() {
+    const botaoAtualizar = $("atualizar-modelos");
+    botaoAtualizar.disabled = true;
+    $("origem-modelos").textContent = "Buscando modelos...";
+    const { ok, dados } = await requisitar("/api/modelos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ API_KEY: $("API_KEY").value }),
+    });
+    botaoAtualizar.disabled = false;
+    if (!ok) { $("origem-modelos").textContent = "Não foi possível buscar os modelos."; return; }
+    modelosDisponiveis = dados.modelos || [];
+    $("origem-modelos").textContent = dados.aviso || "Lista obtida da API do Gemini com a sua key.";
+    renderizarModelos();
+  }
 
   function mostrarMensagem(texto, tipo) {
     const el = $("mensagem");
@@ -234,11 +360,21 @@
     $("campo-libreoffice").hidden = formatoSelecionado() !== "pdf";
   }
 
+  function atualizarResumo() {
+    const chave = $("API_KEY").value.trim() ? "API key salva" : "falta a API key";
+    $("resumo-config").textContent = `(${chave}, formato ${formatoSelecionado().toUpperCase()})`;
+  }
+
+  function abrirConfiguracao(focarChave) {
+    $("configuracao").open = true;
+    if (focarChave) $("API_KEY").focus();
+  }
+
   function lerFormulario() {
     return {
       API_KEY: $("API_KEY").value,
       TECNOLOGIAS: $("TECNOLOGIAS").value.split("\n"),
-      MODELOS: $("MODELOS").value.split("\n"),
+      MODELOS: modelosSelecionados.slice(),
       RETRY: $("RETRY").value,
       FORMATO_SAIDA: formatoSelecionado(),
       LIBREOFFICE: $("LIBREOFFICE").value,
@@ -263,11 +399,12 @@
 
   async function carregarConfiguracao() {
     const { ok, dados } = await requisitar("/api/config");
-    if (!ok) { mostrarMensagem(dados.erro || "Não foi possível carregar a configuração.", "erro"); return; }
+    if (!ok) { mostrarMensagem(dados.erro || "Não foi possível ler a configuração salva.", "erro"); return; }
     const c = dados.config;
     $("API_KEY").value = c.API_KEY || "";
     $("TECNOLOGIAS").value = (c.TECNOLOGIAS || []).join("\n");
-    $("MODELOS").value = (c.MODELOS || []).join("\n");
+    modelosSelecionados = c.MODELOS || [];
+    renderizarModelos();
     $("RETRY").value = c.RETRY;
     $("LIBREOFFICE").value = c.LIBREOFFICE || "";
     $("MODELO_DOCX").value = c.MODELO_DOCX || "";
@@ -275,6 +412,9 @@
     const radio = document.querySelector(`input[name=FORMATO_SAIDA][value="${c.FORMATO_SAIDA}"]`);
     if (radio) radio.checked = true;
     atualizarCampoLibreoffice();
+    atualizarResumo();
+    if (!c.API_KEY) abrirConfiguracao(false);
+    carregarModelos();
   }
 
   function adicionarLog(linhas) {
@@ -295,7 +435,7 @@
     $("salvar").disabled = executando;
     $("cancelar").hidden = !executando;
     $("status").classList.toggle("ativo", executando);
-    $("status-texto").textContent = executando ? "Executando" : "Parado";
+    $("status-texto").textContent = executando ? "Gerando" : "Parado";
   }
 
   async function acompanhar() {
@@ -325,13 +465,17 @@
     return (bytes / 1024 / 1024).toFixed(1) + " MB";
   }
 
+  function mostrarVazio(alvo) {
+    const p = document.createElement("p");
+    p.className = "vazio";
+    p.textContent = VAZIO;
+    alvo.replaceChildren(p);
+  }
+
   async function carregarArquivos() {
     const { ok, dados } = await requisitar("/api/arquivos");
     const alvo = $("arquivos");
-    if (!ok || !dados.arquivos.length) {
-      alvo.innerHTML = '<p class="vazio">Nenhum arquivo gerado ainda.</p>';
-      return;
-    }
+    if (!ok || !dados.arquivos.length) { mostrarVazio(alvo); return; }
     const tabela = document.createElement("table");
     tabela.innerHTML = "<thead><tr><th>Arquivo</th><th>Tamanho</th><th>Gerado em</th></tr></thead>";
     const corpo = document.createElement("tbody");
@@ -359,34 +503,50 @@
     evento.preventDefault();
     mostrarMensagem("");
     const { ok, dados } = await enviar("/api/gerar");
-    if (!ok) { mostrarMensagem(dados.erros || ["Falha ao iniciar a execução."], "erro"); return; }
+    if (!ok) {
+      const erros = dados.erros || ["Não foi possível iniciar a geração."];
+      mostrarMensagem(erros, "erro");
+      if (erros.some((e) => e.includes("API Key"))) abrirConfiguracao(true);
+      return;
+    }
+    atualizarResumo();
     $("log").replaceChildren();
     proximaLinha = 0;
-    mostrarMensagem("Execução iniciada.", "ok");
+    mostrarMensagem("Geração iniciada.", "ok");
     definirExecutando(true);
     acompanhar();
   });
 
   $("salvar").addEventListener("click", async () => {
     const { ok, dados } = await enviar("/api/config");
-    if (ok) mostrarMensagem("Configuração salva no config.yml.", "ok");
-    else mostrarMensagem(dados.erros || ["Falha ao salvar."], "erro");
+    if (ok) { atualizarResumo(); mostrarMensagem("Configuração salva.", "ok"); }
+    else mostrarMensagem(dados.erros || ["Não foi possível salvar a configuração."], "erro");
   });
 
   $("cancelar").addEventListener("click", async () => {
     await requisitar("/api/cancelar", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-    mostrarMensagem("Cancelamento solicitado: a execução para antes da próxima tecnologia.");
+    mostrarMensagem("Parando: a geração termina antes da próxima tecnologia.");
   });
 
   $("mostrar-chave").addEventListener("click", () => {
     const campo = $("API_KEY");
-    const oculto = campo.type === "password";
-    campo.type = oculto ? "text" : "password";
-    $("mostrar-chave").textContent = oculto ? "Ocultar" : "Mostrar";
+    const mostrar = campo.type === "password";
+    campo.type = mostrar ? "text" : "password";
+    const botao = $("mostrar-chave");
+    botao.textContent = mostrar ? "Ocultar" : "Mostrar";
+    botao.setAttribute("aria-pressed", String(mostrar));
+    botao.setAttribute("aria-label", mostrar ? "Ocultar API key" : "Mostrar API key");
   });
 
-  document.querySelectorAll("input[name=FORMATO_SAIDA]").forEach((r) => r.addEventListener("change", atualizarCampoLibreoffice));
+  $("atualizar-modelos").addEventListener("click", carregarModelos);
+  $("API_KEY").addEventListener("change", () => { atualizarResumo(); carregarModelos(); });
 
+  document.querySelectorAll("input[name=FORMATO_SAIDA]").forEach((r) => r.addEventListener("change", () => {
+    atualizarCampoLibreoffice();
+    atualizarResumo();
+  }));
+
+  mostrarVazio($("arquivos"));
   carregarConfiguracao();
   carregarArquivos();
   acompanhar();

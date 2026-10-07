@@ -15,6 +15,8 @@ import script
 
 PORTA_PADRAO = 8765
 ARQUIVO_HTML = "interface.html"
+MODELOS_FREE_TIER_PADRAO = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.0-flash"]
+TERMOS_FORA_DE_TEXTO = ("image", "tts", "audio", "live", "embedding", "robotics", "computer-use", "-exp")
 CONFIG_PADRAO = {
     "API_KEY": "",
     "RETRY": 5,
@@ -132,6 +134,26 @@ def carregar_configuracao_interface() -> dict:
     return config
 
 
+def listar_modelos_free_tier(api_key: str) -> dict:
+    padrao = {"modelos": MODELOS_FREE_TIER_PADRAO, "origem": "padrao"}
+    if not api_key:
+        return {**padrao, "aviso": "Lista padrão. Informe a API key para buscar a lista atual."}
+
+    try:
+        nomes = set()
+        for modelo in script.genai.Client(api_key=api_key).models.list():
+            nome = (getattr(modelo, "name", "") or "").removeprefix("models/")
+            acoes = getattr(modelo, "supported_actions", None) or []
+            if "generateContent" in acoes and "flash" in nome and not any(t in nome for t in TERMOS_FORA_DE_TEXTO):
+                nomes.add(nome)
+    except Exception as e:
+        return {**padrao, "aviso": f"Não foi possível consultar a API do Gemini ({e}). Usando a lista padrão."}
+
+    if not nomes:
+        return {**padrao, "aviso": "A API não retornou modelos Flash para esta key. Usando a lista padrão."}
+    return {"modelos": sorted(nomes, reverse=True), "origem": "api"}
+
+
 def listar_arquivos_gerados() -> list:
     arquivos = []
     for raiz, _, nomes in os.walk(script.OUTPUT_DIR):
@@ -228,12 +250,15 @@ def criar_handler(execucao: Execucao, logger: logging.Logger, porta: int):
                 logger.warning("Cancelamento solicitado; a execução para antes da próxima tecnologia.")
                 return self._json(200, {"ok": True})
 
-            if url.path not in ("/api/config", "/api/gerar"):
+            if url.path not in ("/api/config", "/api/gerar", "/api/modelos"):
                 return self._json(404, {"erro": "Não encontrado."})
 
             dados = self._ler_json()
             if dados is None:
                 return self._json(400, {"erros": ["Requisição inválida."]})
+
+            if url.path == "/api/modelos":
+                return self._json(200, listar_modelos_free_tier(str(dados.get("API_KEY") or "").strip()))
 
             para_execucao = url.path == "/api/gerar"
             if para_execucao and execucao.executando:
