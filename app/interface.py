@@ -9,7 +9,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 from urllib.request import urlopen
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+PASTA_APP = os.path.dirname(os.path.abspath(__file__))
+os.chdir(PASTA_APP)
 
 import script
 
@@ -203,7 +204,27 @@ def criar_handler(execucao: Execucao, logger: logging.Logger, porta: int):
                 return None
             return dados if isinstance(dados, dict) else None
 
+        def _com_tratamento(self, metodo):
+            try:
+                metodo()
+            except Exception as e:
+                logger.error(f"Erro na interface ao atender {self.command} {self.path}: {e}")
+                mensagem = f"Erro interno da interface: {e}"
+                try:
+                    if self.path.startswith("/api/"):
+                        self._json(500, {"erro": mensagem, "erros": [mensagem]})
+                    else:
+                        self._responder(500, mensagem.encode("utf-8"), "text/plain; charset=utf-8")
+                except Exception:
+                    pass
+
         def do_GET(self):
+            self._com_tratamento(self._get)
+
+        def do_POST(self):
+            self._com_tratamento(self._post)
+
+        def _get(self):
             if not self._origem_valida():
                 return self._json(403, {"erro": "Origem não permitida."})
 
@@ -223,7 +244,7 @@ def criar_handler(execucao: Execucao, logger: logging.Logger, porta: int):
                 except ValueError:
                     desde = 0
                 linhas, total = execucao.ler(desde)
-                return self._json(200, {"executando": execucao.executando, "linhas": linhas, "total": total})
+                return self._json(200, {"executando": execucao.executando, "linhas": linhas, "total": total, "pasta": PASTA_APP})
             if url.path == "/api/arquivos":
                 return self._json(200, {"arquivos": listar_arquivos_gerados()})
             if url.path.startswith("/arquivos/"):
@@ -240,7 +261,7 @@ def criar_handler(execucao: Execucao, logger: logging.Logger, porta: int):
             with open(caminho, "rb") as f:
                 self._responder(200, f.read(), tipo, {"Content-Disposition": f'attachment; filename="{nome}"'})
 
-        def do_POST(self):
+        def _post(self):
             if not self._origem_valida():
                 return self._json(403, {"erro": "Origem não permitida."})
 
@@ -277,12 +298,13 @@ def criar_handler(execucao: Execucao, logger: logging.Logger, porta: int):
     return Handler
 
 
-def interface_ja_aberta(endereco: str) -> bool:
+def consultar_interface_aberta(endereco: str):
     try:
         with urlopen(endereco + "api/status", timeout=2) as resposta:
-            return "executando" in json.loads(resposta.read())
+            dados = json.loads(resposta.read())
+        return dados if "executando" in dados else None
     except Exception:
-        return False
+        return None
 
 
 def main():
@@ -299,11 +321,18 @@ def main():
     try:
         servidor = ThreadingHTTPServer(("127.0.0.1", args.porta), criar_handler(execucao, logger, args.porta))
     except OSError:
-        if interface_ja_aberta(endereco):
+        aberta = consultar_interface_aberta(endereco)
+        if aberta and aberta.get("pasta") == PASTA_APP:
             print(f"A interface já está em execução em {endereco}")
             if not args.sem_navegador:
                 webbrowser.open(endereco)
             return
+        if aberta:
+            raise SystemExit(
+                f"Uma versão anterior da interface ainda está rodando na porta {args.porta}.\n"
+                "Encerre-a com: pkill -f interface.py\n"
+                "e rode o comando de novo."
+            )
         raise SystemExit(f"A porta {args.porta} está em uso por outro programa. Use --porta para escolher outra.")
 
     print(f"Interface disponível em {endereco} (Ctrl+C para encerrar)")
