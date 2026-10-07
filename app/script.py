@@ -299,6 +299,7 @@ def executar(config: dict, logger: logging.Logger, cancelar: threading.Event = N
     return True
 
 def main():
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     logger = setup_logger("execucao.log")
     logger.info("Iniciando a execução.")
 
