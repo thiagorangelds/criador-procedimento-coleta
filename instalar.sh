@@ -19,6 +19,9 @@ DIR="${CRIADOR_DIR:-$HOME/.local/share/criador-procedimento-coleta}"
 BIN_DIR="${CRIADOR_BIN:-$HOME/.local/bin}"
 COMANDO="criador-procedimento"
 MARCADOR_PATH="# criador-procedimento-coleta"
+PASTAS_ATALHO="$HOME/bin /opt/homebrew/bin /usr/local/bin"
+COMANDO_NO_PATH=""
+RC_ALTERADO=""
 
 info() { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
 aviso() { printf '\033[1;33mAviso:\033[0m %s\n' "$*" >&2; }
@@ -37,6 +40,13 @@ desinstalar() {
     rm -rf "$DIR"
     info "Removendo $BIN_DIR/$COMANDO"
     rm -f "$BIN_DIR/$COMANDO"
+    local pasta
+    for pasta in $PASTAS_ATALHO; do
+        if [ -L "$pasta/$COMANDO" ] && [ "$(readlink "$pasta/$COMANDO")" = "$BIN_DIR/$COMANDO" ]; then
+            info "Removendo atalho $pasta/$COMANDO"
+            rm -f "$pasta/$COMANDO"
+        fi
+    done
     info "Desinstalação concluída. Se quiser, remova a linha '$MARCADOR_PATH' de $(arquivo_shell)."
 }
 
@@ -111,17 +121,28 @@ EOF
     info "Comando criado: $BIN_DIR/$COMANDO"
 
     case ":$PATH:" in
-        *":$BIN_DIR:"*) ;;
-        *)
-            local rc
-            rc="$(arquivo_shell)"
-            if ! grep -qF "$MARCADOR_PATH" "$rc" 2>/dev/null; then
-                printf '\nexport PATH="%s:$PATH" %s\n' "$BIN_DIR" "$MARCADOR_PATH" >> "$rc"
-                info "$BIN_DIR adicionado ao PATH em $rc"
-            fi
-            aviso "Abra um novo terminal (ou rode: source $rc) para usar o comando '$COMANDO'."
-            ;;
+        *":$BIN_DIR:"*) COMANDO_NO_PATH=1; return ;;
     esac
+
+    local pasta
+    for pasta in $PASTAS_ATALHO; do
+        case ":$PATH:" in
+            *":$pasta:"*)
+                if [ -d "$pasta" ] && [ -w "$pasta" ] && { [ ! -e "$pasta/$COMANDO" ] || [ -L "$pasta/$COMANDO" ]; }; then
+                    ln -sf "$BIN_DIR/$COMANDO" "$pasta/$COMANDO"
+                    info "Atalho criado em $pasta/$COMANDO (pasta que já está no PATH)"
+                    COMANDO_NO_PATH=1
+                    return
+                fi
+                ;;
+        esac
+    done
+
+    RC_ALTERADO="$(arquivo_shell)"
+    if ! grep -qF "$MARCADOR_PATH" "$RC_ALTERADO" 2>/dev/null; then
+        printf '\nexport PATH="%s:$PATH" %s\n' "$BIN_DIR" "$MARCADOR_PATH" >> "$RC_ALTERADO"
+        info "$BIN_DIR adicionado ao PATH em $RC_ALTERADO"
+    fi
 }
 
 main() {
@@ -143,7 +164,15 @@ main() {
         || [ -x /Applications/LibreOffice.app/Contents/MacOS/soffice ] \
         || aviso "LibreOffice não encontrado: necessário apenas para gerar em PDF (Linux: sudo apt-get install libreoffice-writer | macOS: brew install --cask libreoffice)."
 
-    info "Instalação concluída. Para abrir a interface, rode: $COMANDO"
+    info "Instalação concluída."
+    if [ -n "$COMANDO_NO_PATH" ]; then
+        info "Para abrir a interface, rode: $COMANDO"
+    else
+        printf '\n\033[1;33m%s\033[0m\n' "IMPORTANTE: o comando '$COMANDO' só será reconhecido em um NOVO terminal."
+        printf '%s\n' "Para usar neste terminal agora, rode um destes:"
+        printf '    %s\n' "source $RC_ALTERADO && $COMANDO" "$BIN_DIR/$COMANDO"
+        printf '\n'
+    fi
     info "Para atualizar depois: $COMANDO --atualizar"
 }
 

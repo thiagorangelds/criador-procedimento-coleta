@@ -24,6 +24,8 @@ criador-procedimento --atualizar   # atualiza o código e as dependências (pres
 bash ~/.local/share/criador-procedimento-coleta/instalar.sh --desinstalar
 ```
 
+Se o terminal disser que o comando não foi encontrado, abra um novo terminal (o PATH só é recarregado em uma nova sessão) ou rode direto `~/.local/bin/criador-procedimento`.
+
 Os documentos gerados ficam em `~/.local/share/criador-procedimento-coleta/procedimentos/` e também podem ser baixados pela interface.
 
 Instalação manual, sem o instalador: `pip install -r requirements.txt` dentro de um clone do repositório.
