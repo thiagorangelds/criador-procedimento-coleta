@@ -36,7 +36,20 @@ arquivo_shell() {
     esac
 }
 
+parar_interface() {
+    command -v pkill >/dev/null 2>&1 || return 0
+    local alvo
+    # $DIR/interface.py é o caminho das versões anteriores a app/
+    for alvo in "$DIR/interface.py" "$APP/interface.py"; do
+        if pgrep -f "$alvo" >/dev/null 2>&1; then
+            pkill -f "$alvo" || true
+            info "Interface em execução encerrada ($alvo)."
+        fi
+    done
+}
+
 desinstalar() {
+    parar_interface
     info "Removendo $DIR"
     rm -rf "$DIR"
     info "Removendo $BIN_DIR/$COMANDO"
@@ -160,6 +173,7 @@ main() {
     fi
 
     verificar_python
+    parar_interface
     baixar_codigo
     local arquivo
     for arquivo in config.yml requirements.txt script.py interface.py interface.html; do
