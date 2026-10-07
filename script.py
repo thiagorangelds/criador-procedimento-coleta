@@ -7,6 +7,7 @@ import logging.handlers
 import os
 import time
 import random
+import threading
 import yaml
 
 CONFIG_FILE = "config.yml"
@@ -209,45 +210,75 @@ def gerar_documento_procedimento_coleta(tecnologia, nome_base, diretorio, proced
         gerar_docx_procedimento(MODELO_DOCX, nome_arquivo_saida, tecnologia, conteudo)
     logger.info(f"Documento de Procedimento de Coleta de '{tecnologia}' salvo com sucesso em: {nome_arquivo_saida}")
 
-def main():
-    logger = setup_logger("execucao.log")
-    logger.info("Iniciando a execução.")
+def salvar_configuracao(config: dict, caminho: str = CONFIG_FILE) -> None:
+    def valor(v) -> str:
+        return json.dumps(v, ensure_ascii=False)
 
-    try:
-        config = carregar_configuracao()
-        logger.info(f"Arquivo de configuração '{CONFIG_FILE}' encontrado com sucesso.")
-    except FileNotFoundError:
-        logger.error(f"Erro: Arquivo '{CONFIG_FILE}' não encontrado. Abortando.")
-        return
-    except yaml.YAMLError as e:
-        logger.error(f"Erro: Formato YAML inválido no arquivo '{CONFIG_FILE}': {e}. Abortando.")
-        return
+    def lista(itens) -> str:
+        return "\n".join(f"  - {valor(item)}" for item in itens) if itens else "  []"
+
+    def opcional(chave: str, exemplo: str) -> str:
+        return f"{chave}: {valor(config[chave])}" if config.get(chave) else f"# {chave}: {exemplo}"
+
+    conteudo = f'''# Chave da API do Gemini.
+API_KEY: {valor(config.get("API_KEY", ""))}
+
+# Tentativas por modelo em caso de limite de taxa ou indisponibilidade da API.
+RETRY: {int(config.get("RETRY", 2))}
+
+# Modelos do Gemini, em ordem de preferência (fallback).
+MODELOS:
+{lista(config.get("MODELOS") or [])}
+
+# Tecnologias para as quais os procedimentos serão gerados.
+TECNOLOGIAS:
+{lista(config.get("TECNOLOGIAS") or [])}
+
+# Formato do documento de Procedimento de Coleta: "docx" (padrão) ou "pdf".
+# Para gerar em "pdf" é necessário ter o LibreOffice instalado.
+FORMATO_SAIDA: {config.get("FORMATO_SAIDA", FORMATO_SAIDA_PADRAO)}
+
+# (Opcional, só para "pdf") Caminho do executável do LibreOffice, caso não esteja no PATH.
+{opcional("LIBREOFFICE", "/opt/libreoffice/program/soffice")}
+
+# (Opcional) Modelo Word usado no documento de Procedimento de Coleta.
+{opcional("MODELO_DOCX", MODELO_DOCX_PADRAO)}
+'''
+    with open(caminho, 'w', encoding='utf-8') as f:
+        f.write(conteudo)
+
+def executar(config: dict, logger: logging.Logger, cancelar: threading.Event = None) -> bool:
+    cancelar = cancelar or threading.Event()
 
     try:
         API_KEY = config["API_KEY"]
         TECNOLOGIAS = config["TECNOLOGIAS"] or []
         RETRY = config.get("RETRY", 2)
         MODELOS = config.get("MODELOS", ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"])
-        MODELO_DOCX = config.get("MODELO_DOCX", MODELO_DOCX_PADRAO)
+        MODELO_DOCX = config.get("MODELO_DOCX") or MODELO_DOCX_PADRAO
         FORMATO_SAIDA = str(config.get("FORMATO_SAIDA", FORMATO_SAIDA_PADRAO)).strip().lower()
     except KeyError as e:
         logger.error(f"Erro: Chave '{e.args[0]}' ausente no arquivo de configuração. Abortando.")
-        return
+        return False
 
     if not os.path.isfile(MODELO_DOCX):
         logger.error(f"Erro: Modelo DOCX '{MODELO_DOCX}' não encontrado. Abortando.")
-        return
+        return False
 
     if FORMATO_SAIDA not in FORMATOS_SAIDA:
         logger.error(f"Erro: FORMATO_SAIDA '{FORMATO_SAIDA}' inválido. Use um destes: {', '.join(FORMATOS_SAIDA)}. Abortando.")
-        return
+        return False
 
     LIBREOFFICE = localizar_libreoffice(config.get("LIBREOFFICE")) if FORMATO_SAIDA == "pdf" else None
     if FORMATO_SAIDA == "pdf" and not LIBREOFFICE:
         logger.error("Erro: LibreOffice não encontrado (necessário para gerar o PDF). Instale-o ou informe o executável na chave 'LIBREOFFICE' do config. Abortando.")
-        return
+        return False
 
     for tecnologia in [t.strip() for t in TECNOLOGIAS if t and t.strip()]:
+        if cancelar.is_set():
+            logger.warning("Execução cancelada pelo usuário.")
+            return False
+
         nome_base = tecnologia.replace(' ', '_').lower().replace('-', '_')
         diretorio = f"{OUTPUT_DIR}/{nome_base}"
         os.makedirs(diretorio, exist_ok=True)
@@ -262,9 +293,26 @@ def main():
         except Exception as e:
             logger.error(f"Ocorreu um erro inesperado ao processar '{tecnologia}': {e}")
 
-        time.sleep(15)
+        cancelar.wait(15)
 
     logger.info("Execução concluída.")
+    return True
+
+def main():
+    logger = setup_logger("execucao.log")
+    logger.info("Iniciando a execução.")
+
+    try:
+        config = carregar_configuracao()
+        logger.info(f"Arquivo de configuração '{CONFIG_FILE}' encontrado com sucesso.")
+    except FileNotFoundError:
+        logger.error(f"Erro: Arquivo '{CONFIG_FILE}' não encontrado. Abortando.")
+        return
+    except yaml.YAMLError as e:
+        logger.error(f"Erro: Formato YAML inválido no arquivo '{CONFIG_FILE}': {e}. Abortando.")
+        return
+
+    executar(config, logger)
 
 if __name__ == "__main__":
     main()

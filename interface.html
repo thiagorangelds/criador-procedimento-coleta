@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Procedimento de Coleta</title>
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --text: #1f2933;
+    --muted: #5f6b7a;
+    --border: #d7dde4;
+    --accent: #0097a7;
+    --accent-text: #ffffff;
+    --danger: #c62828;
+    --ok: #2e7d32;
+    --log-bg: #10161d;
+    --log-text: #d6e2ec;
+    --input-bg: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11161c;
+      --card: #1a2129;
+      --text: #e3e9ef;
+      --muted: #9aa7b4;
+      --border: #2d3742;
+      --accent: #26c6da;
+      --accent-text: #0b1a1d;
+      --danger: #ef5350;
+      --ok: #66bb6a;
+      --log-bg: #0b0f14;
+      --log-text: #d6e2ec;
+      --input-bg: #141a21;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  h2 { font-size: 16px; margin: 0 0 14px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  label { display: block; font-weight: 600; margin-bottom: 4px; }
+  .hint { display: block; color: var(--muted); font-size: 13px; font-weight: 400; margin-top: 4px; }
+  input[type=text], input[type=password], input[type=number], textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--text);
+    font: inherit;
+  }
+  textarea { min-height: 120px; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; }
+  input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .linha { display: flex; gap: 8px; }
+  .linha input { flex: 1; }
+  .radios { display: flex; gap: 20px; padding-top: 4px; }
+  .radios label { font-weight: 400; display: flex; gap: 6px; align-items: center; margin: 0; }
+  details summary { cursor: pointer; font-weight: 600; margin-bottom: 12px; }
+  .campo { margin-bottom: 16px; }
+  .campo:last-child { margin-bottom: 0; }
+  button {
+    font: inherit;
+    font-weight: 600;
+    padding: 9px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button.primario { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  button.perigo { color: var(--danger); border-color: var(--danger); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .acoes { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .mensagem { font-size: 14px; }
+  .mensagem.erro { color: var(--danger); }
+  .mensagem.ok { color: var(--ok); }
+  .mensagem ul { margin: 0; padding-left: 18px; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .status.ativo .ponto { background: var(--accent); animation: pulso 1s infinite; }
+  @keyframes pulso { 50% { opacity: .3; } }
+  .cabecalho-log { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .cabecalho-log h2 { margin: 0; }
+  pre#log {
+    margin: 0;
+    background: var(--log-bg);
+    color: var(--log-text);
+    border-radius: 6px;
+    padding: 12px;
+    height: 280px;
+    overflow: auto;
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .log-erro { color: #ff8a80; }
+  .log-aviso { color: #ffd54f; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  td.num { white-space: nowrap; color: var(--muted); }
+  a { color: var(--accent); }
+  .vazio { color: var(--muted); font-size: 14px; }
+  .tabela { overflow-x: auto; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Procedimento de Coleta</h1>
+  <p class="sub">Configure e gere os documentos de coleta de logs. As alterações são gravadas no <code>config.yml</code>.</p>
+
+  <form id="form" autocomplete="off">
+    <section class="card">
+      <h2>Configuração</h2>
+      <div class="grid">
+        <div>
+          <div class="campo">
+            <label for="API_KEY">API Key do Gemini</label>
+            <div class="linha">
+              <input type="password" id="API_KEY" spellcheck="false">
+              <button type="button" id="mostrar-chave">Mostrar</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Formato do Procedimento de Coleta</label>
+            <div class="radios">
+              <label><input type="radio" name="FORMATO_SAIDA" value="docx"> DOCX</label>
+              <label><input type="radio" name="FORMATO_SAIDA" value="pdf"> PDF</label>
+            </div>
+            <span class="hint">Para gerar em PDF é necessário ter o LibreOffice instalado.</span>
+          </div>
+          <div class="campo" id="campo-libreoffice">
+            <label for="LIBREOFFICE">Executável do LibreOffice <span class="hint" style="display:inline">(opcional)</span></label>
+            <input type="text" id="LIBREOFFICE" placeholder="Detectado automaticamente se estiver no PATH" spellcheck="false">
+          </div>
+        </div>
+        <div class="campo">
+          <label for="TECNOLOGIAS">Tecnologias</label>
+          <textarea id="TECNOLOGIAS" placeholder="Fortinet FortiGate&#10;Microsoft Active Directory" spellcheck="false"></textarea>
+          <span class="hint">Uma tecnologia por linha.</span>
+        </div>
+      </div>
+
+      <details>
+        <summary>Avançado</summary>
+        <div class="grid">
+          <div class="campo">
+            <label for="MODELOS">Modelos do Gemini</label>
+            <textarea id="MODELOS" spellcheck="false" style="min-height:90px"></textarea>
+            <span class="hint">Um por linha, em ordem de preferência (fallback).</span>
+          </div>
+          <div>
+            <div class="campo">
+              <label for="RETRY">Tentativas por modelo</label>
+              <input type="number" id="RETRY" min="1" max="20">
+              <span class="hint">Em caso de limite de taxa ou indisponibilidade da API.</span>
+            </div>
+            <div class="campo">
+              <label for="MODELO_DOCX">Modelo Word <span class="hint" style="display:inline">(opcional)</span></label>
+              <input type="text" id="MODELO_DOCX" spellcheck="false">
+            </div>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="card">
+      <div class="acoes">
+        <button type="submit" class="primario" id="gerar">Gerar documentos</button>
+        <button type="button" id="salvar">Salvar configuração</button>
+        <button type="button" class="perigo" id="cancelar" hidden>Cancelar</button>
+        <div class="mensagem" id="mensagem" role="status"></div>
+      </div>
+    </section>
+  </form>
+
+  <section class="card">
+    <div class="cabecalho-log">
+      <h2>Execução</h2>
+      <span class="status" id="status"><span class="ponto"></span><span id="status-texto">Parado</span></span>
+    </div>
+    <pre id="log" aria-live="polite"></pre>
+  </section>
+
+  <section class="card">
+    <h2>Arquivos gerados</h2>
+    <div id="arquivos" class="tabela"><p class="vazio">Nenhum arquivo gerado ainda.</p></div>
+  </section>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const campos = ["API_KEY", "TECNOLOGIAS", "MODELOS", "RETRY", "LIBREOFFICE", "MODELO_DOCX"];
+  let proximaLinha = 0;
+  let acompanhando = false;
+
+  function mostrarMensagem(texto, tipo) {
+    const el = $("mensagem");
+    el.className = "mensagem " + (tipo || "");
+    el.replaceChildren();
+    if (Array.isArray(texto)) {
+      const ul = document.createElement("ul");
+      texto.forEach((t) => { const li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
+      el.appendChild(ul);
+    } else {
+      el.textContent = texto || "";
+    }
+  }
+
+  function formatoSelecionado() {
+    const marcado = document.querySelector("input[name=FORMATO_SAIDA]:checked");
+    return marcado ? marcado.value : "docx";
+  }
+
+  function atualizarCampoLibreoffice() {
+    $("campo-libreoffice").hidden = formatoSelecionado() !== "pdf";
+  }
+
+  function lerFormulario() {
+    return {
+      API_KEY: $("API_KEY").value,
+      TECNOLOGIAS: $("TECNOLOGIAS").value.split("\n"),
+      MODELOS: $("MODELOS").value.split("\n"),
+      RETRY: $("RETRY").value,
+      FORMATO_SAIDA: formatoSelecionado(),
+      LIBREOFFICE: $("LIBREOFFICE").value,
+      MODELO_DOCX: $("MODELO_DOCX").value,
+    };
+  }
+
+  async function requisitar(url, opcoes) {
+    const resposta = await fetch(url, opcoes);
+    let dados = {};
+    try { dados = await resposta.json(); } catch (e) { /* corpo vazio */ }
+    return { ok: resposta.ok, status: resposta.status, dados };
+  }
+
+  async function enviar(url) {
+    return requisitar(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lerFormulario()),
+    });
+  }
+
+  async function carregarConfiguracao() {
+    const { ok, dados } = await requisitar("/api/config");
+    if (!ok) { mostrarMensagem(dados.erro || "Não foi possível carregar a configuração.", "erro"); return; }
+    const c = dados.config;
+    $("API_KEY").value = c.API_KEY || "";
+    $("TECNOLOGIAS").value = (c.TECNOLOGIAS || []).join("\n");
+    $("MODELOS").value = (c.MODELOS || []).join("\n");
+    $("RETRY").value = c.RETRY;
+    $("LIBREOFFICE").value = c.LIBREOFFICE || "";
+    $("MODELO_DOCX").value = c.MODELO_DOCX || "";
+    $("MODELO_DOCX").placeholder = dados.modelo_docx_padrao;
+    const radio = document.querySelector(`input[name=FORMATO_SAIDA][value="${c.FORMATO_SAIDA}"]`);
+    if (radio) radio.checked = true;
+    atualizarCampoLibreoffice();
+  }
+
+  function adicionarLog(linhas) {
+    const log = $("log");
+    const noFim = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
+    linhas.forEach((linha) => {
+      const span = document.createElement("span");
+      if (linha.includes("[ERROR]")) span.className = "log-erro";
+      else if (linha.includes("[WARNING]")) span.className = "log-aviso";
+      span.textContent = linha + "\n";
+      log.appendChild(span);
+    });
+    if (noFim) log.scrollTop = log.scrollHeight;
+  }
+
+  function definirExecutando(executando) {
+    $("gerar").disabled = executando;
+    $("salvar").disabled = executando;
+    $("cancelar").hidden = !executando;
+    $("status").classList.toggle("ativo", executando);
+    $("status-texto").textContent = executando ? "Executando" : "Parado";
+  }
+
+  async function acompanhar() {
+    if (acompanhando) return;
+    acompanhando = true;
+    try {
+      while (true) {
+        const { ok, dados } = await requisitar(`/api/status?desde=${proximaLinha}`);
+        if (ok) {
+          if (dados.total < proximaLinha) { $("log").replaceChildren(); proximaLinha = 0; continue; }
+          adicionarLog(dados.linhas);
+          proximaLinha = dados.total;
+          definirExecutando(dados.executando);
+          if (!dados.executando) break;
+        }
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    } finally {
+      acompanhando = false;
+      carregarArquivos();
+    }
+  }
+
+  function formatarTamanho(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / 1024 / 1024).toFixed(1) + " MB";
+  }
+
+  async function carregarArquivos() {
+    const { ok, dados } = await requisitar("/api/arquivos");
+    const alvo = $("arquivos");
+    if (!ok || !dados.arquivos.length) {
+      alvo.innerHTML = '<p class="vazio">Nenhum arquivo gerado ainda.</p>';
+      return;
+    }
+    const tabela = document.createElement("table");
+    tabela.innerHTML = "<thead><tr><th>Arquivo</th><th>Tamanho</th><th>Gerado em</th></tr></thead>";
+    const corpo = document.createElement("tbody");
+    dados.arquivos.forEach((a) => {
+      const tr = document.createElement("tr");
+      const tdNome = document.createElement("td");
+      const link = document.createElement("a");
+      link.href = "/arquivos/" + a.caminho.split("/").map(encodeURIComponent).join("/");
+      link.textContent = a.caminho;
+      tdNome.appendChild(link);
+      const tdTamanho = document.createElement("td");
+      tdTamanho.className = "num";
+      tdTamanho.textContent = formatarTamanho(a.tamanho);
+      const tdData = document.createElement("td");
+      tdData.className = "num";
+      tdData.textContent = new Date(a.modificado * 1000).toLocaleString("pt-BR");
+      tr.append(tdNome, tdTamanho, tdData);
+      corpo.appendChild(tr);
+    });
+    tabela.appendChild(corpo);
+    alvo.replaceChildren(tabela);
+  }
+
+  $("form").addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+    mostrarMensagem("");
+    const { ok, dados } = await enviar("/api/gerar");
+    if (!ok) { mostrarMensagem(dados.erros || ["Falha ao iniciar a execução."], "erro"); return; }
+    $("log").replaceChildren();
+    proximaLinha = 0;
+    mostrarMensagem("Execução iniciada.", "ok");
+    definirExecutando(true);
+    acompanhar();
+  });
+
+  $("salvar").addEventListener("click", async () => {
+    const { ok, dados } = await enviar("/api/config");
+    if (ok) mostrarMensagem("Configuração salva no config.yml.", "ok");
+    else mostrarMensagem(dados.erros || ["Falha ao salvar."], "erro");
+  });
+
+  $("cancelar").addEventListener("click", async () => {
+    await requisitar("/api/cancelar", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    mostrarMensagem("Cancelamento solicitado: a execução para antes da próxima tecnologia.");
+  });
+
+  $("mostrar-chave").addEventListener("click", () => {
+    const campo = $("API_KEY");
+    const oculto = campo.type === "password";
+    campo.type = oculto ? "text" : "password";
+    $("mostrar-chave").textContent = oculto ? "Ocultar" : "Mostrar";
+  });
+
+  document.querySelectorAll("input[name=FORMATO_SAIDA]").forEach((r) => r.addEventListener("change", atualizarCampoLibreoffice));
+
+  carregarConfiguracao();
+  carregarArquivos();
+  acompanhar();
+</script>
+</body>
+</html>

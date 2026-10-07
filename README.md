@@ -4,9 +4,29 @@ Gera, via Gemini, a documentação de coleta de logs para cada tecnologia listad
 
 ## Instalação
 
+Requisitos: Linux ou macOS, `git` e Python 3.9+.
+
 ```bash
-pip install -r requirements.txt
+curl -fsSL https://raw.githubusercontent.com/thiagorangelds/criador-procedimento-coleta/main/instalar.sh | bash
 ```
+
+O instalador:
+
+- clona o repositório em `~/.local/share/criador-procedimento-coleta`;
+- instala os `requirements.txt` num ambiente virtual próprio (`.venv`). Se o venv não estiver disponível, usa `pip3`/`pip` com `--user`;
+- cria o comando `criador-procedimento` em `~/.local/bin` e, se preciso, adiciona essa pasta ao PATH no `.zshrc`/`.bashrc`.
+
+Depois, abra um novo terminal e rode:
+
+```bash
+criador-procedimento               # abre a interface no navegador
+criador-procedimento --atualizar   # atualiza o código e as dependências (preserva o config.yml)
+bash ~/.local/share/criador-procedimento-coleta/instalar.sh --desinstalar
+```
+
+Os documentos gerados ficam em `~/.local/share/criador-procedimento-coleta/procedimentos/` e também podem ser baixados pela interface.
+
+Instalação manual, sem o instalador: `pip install -r requirements.txt` dentro de um clone do repositório.
 
 Somente se `FORMATO_SAIDA` for `pdf`: o PDF é gerado pelo LibreOffice (headless), que precisa estar instalado:
 
@@ -31,9 +51,28 @@ Edite o `config.yml` (cada chave está comentada no próprio arquivo):
 
 ## Uso
 
+### Interface gráfica
+
+```bash
+python interface.py
+```
+
+Abre no navegador (`http://127.0.0.1:8765/`) um formulário com todas as opções do `config.yml`. Lá é possível:
+
+- **Salvar configuração:** grava os campos no `config.yml`.
+- **Gerar documentos:** salva e inicia a geração, com o log acompanhado em tempo real.
+- **Cancelar:** interrompe a geração antes da próxima tecnologia.
+- **Arquivos gerados:** baixa os documentos de `procedimentos/`.
+
+Opções: `--porta <n>` para usar outra porta e `--sem-navegador` para não abrir o navegador automaticamente. A interface só aceita conexões da própria máquina e não precisa de nenhuma dependência além das do `requirements.txt`.
+
+### Linha de comando
+
 ```bash
 python script.py
 ```
+
+Usa diretamente o que estiver no `config.yml`.
 
 Para cada tecnologia são gerados, em `procedimentos/<tecnologia>/`:
 
