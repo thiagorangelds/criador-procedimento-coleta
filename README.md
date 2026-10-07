@@ -14,21 +14,54 @@ O instalador:
 
 - clona o repositório em `~/.local/share/criador-procedimento-coleta`;
 - instala os `requirements.txt` num ambiente virtual próprio (`.venv`). Se o venv não estiver disponível, usa `pip3`/`pip` com `--user`;
-- cria o comando `criador-procedimento` em `~/.local/bin` e, se preciso, adiciona essa pasta ao PATH no `.zshrc`/`.bashrc`.
+- cria o comando `criador-procedimento`. Se `~/.local/bin` não estiver no PATH, cria um atalho numa pasta que já esteja (`~/bin`, `/opt/homebrew/bin` ou `/usr/local/bin`) ou adiciona `~/.local/bin` ao PATH no `.zshrc`/`.bashrc`. Nesse último caso, o comando só é reconhecido num terminal novo.
 
-Depois, abra um novo terminal e rode:
+Para abrir a interface no navegador:
 
 ```bash
-criador-procedimento               # abre a interface no navegador
-criador-procedimento --atualizar   # atualiza o código e as dependências (preserva o config.yml)
-bash ~/.local/share/criador-procedimento-coleta/instalar.sh --desinstalar
+criador-procedimento
 ```
 
-Se o terminal disser que o comando não foi encontrado, abra um novo terminal (o PATH só é recarregado em uma nova sessão) ou rode direto `~/.local/bin/criador-procedimento`.
+Na primeira vez, informe a API key do Gemini em **Configuração**. Ela fica salva em `app/config.yml` e não precisa ser informada de novo.
 
 Os documentos gerados ficam em `~/.local/share/criador-procedimento-coleta/app/procedimentos/` e também podem ser baixados pela interface.
 
 Instalação manual, sem o instalador: `pip install -r app/requirements.txt` dentro de um clone do repositório.
+
+## Atualização
+
+Use qualquer uma das opções:
+
+```bash
+criador-procedimento --atualizar
+```
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/thiagorangelds/criador-procedimento-coleta/main/instalar.sh | bash
+```
+
+As duas encerram a interface se ela estiver aberta, atualizam o código e as dependências e preservam o `app/config.yml`, incluindo a API key.
+
+**Vindo de uma versão anterior à pasta `app/`:** prefira o `curl`, que resolve numa execução só. Pelo `criador-procedimento --atualizar`, a primeira execução termina com erro, porque ainda usa o instalador antigo, e a segunda conclui a atualização. A configuração é preservada nos dois casos.
+
+## Desinstalação
+
+```bash
+bash ~/.local/share/criador-procedimento-coleta/instalar.sh --desinstalar
+```
+
+Remove a instalação, o comando e o atalho, se houver. A configuração e os documentos gerados também são apagados, então copie antes o que quiser guardar.
+
+## Solução de problemas
+
+| Sintoma | O que fazer |
+|---|---|
+| `command not found: criador-procedimento` | Abra um novo terminal, porque o PATH só é recarregado numa nova sessão, ou rode direto `~/.local/bin/criador-procedimento`. |
+| Página em branco com `ERR_EMPTY_RESPONSE`, ou aviso de que uma versão anterior da interface está rodando | Uma interface antiga ficou aberta. Rode `pkill -f interface.py` e depois `criador-procedimento`. |
+| `A porta 8765 está em uso por outro programa` | Use outra porta: `criador-procedimento --porta 8766`. |
+| `LibreOffice não encontrado` | Necessário só para gerar em PDF. Instale-o (veja [Geração em PDF](#geração-em-pdf-opcional)) ou use o formato DOCX. |
+
+## Geração em PDF (opcional)
 
 Somente se `FORMATO_SAIDA` for `pdf`: o PDF é gerado pelo LibreOffice (headless), que precisa estar instalado:
 
