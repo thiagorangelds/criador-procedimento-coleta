@@ -1,3 +1,4 @@
 procedimentos/
 execucao.log*
 __pycache__/
+.venv/

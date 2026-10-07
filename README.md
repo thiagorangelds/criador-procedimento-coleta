@@ -26,9 +26,9 @@ bash ~/.local/share/criador-procedimento-coleta/instalar.sh --desinstalar
 
 Se o terminal disser que o comando não foi encontrado, abra um novo terminal (o PATH só é recarregado em uma nova sessão) ou rode direto `~/.local/bin/criador-procedimento`.
 
-Os documentos gerados ficam em `~/.local/share/criador-procedimento-coleta/procedimentos/` e também podem ser baixados pela interface.
+Os documentos gerados ficam em `~/.local/share/criador-procedimento-coleta/app/procedimentos/` e também podem ser baixados pela interface.
 
-Instalação manual, sem o instalador: `pip install -r requirements.txt` dentro de um clone do repositório.
+Instalação manual, sem o instalador: `pip install -r app/requirements.txt` dentro de um clone do repositório.
 
 Somente se `FORMATO_SAIDA` for `pdf`: o PDF é gerado pelo LibreOffice (headless), que precisa estar instalado:
 
@@ -39,9 +39,20 @@ brew install --cask libreoffice              # macOS
 
 O script procura o executável no PATH (`soffice`/`libreoffice`) e no caminho padrão do macOS (`/Applications/LibreOffice.app`).
 
+## Estrutura
+
+| Caminho | Conteúdo |
+|---|---|
+| `instalar.sh` | Instalador e atualizador (Linux/macOS) |
+| `app/interface.py`, `app/interface.html` | Interface web local |
+| `app/script.py`, `app/gerador_docx.py` | Geração dos documentos |
+| `app/config.yml` | Configuração (comentada) |
+| `app/requirements.txt` | Dependências Python |
+| `app/templates/` | Modelo Word do Procedimento de Coleta |
+
 ## Configuração
 
-Edite o `config.yml` (cada chave está comentada no próprio arquivo):
+Edite o `app/config.yml` (cada chave está comentada no próprio arquivo):
 
 - `API_KEY`: chave da API do Gemini.
 - `TECNOLOGIAS`: lista de tecnologias para as quais os procedimentos serão gerados.
@@ -56,7 +67,7 @@ Edite o `config.yml` (cada chave está comentada no próprio arquivo):
 ### Interface gráfica
 
 ```bash
-python interface.py
+python app/interface.py
 ```
 
 Abre no navegador (`http://127.0.0.1:8765/`) um formulário com todas as opções do `config.yml`. Lá é possível:
@@ -72,12 +83,12 @@ Opções: `--porta <n>` para usar outra porta e `--sem-navegador` para não abri
 ### Linha de comando
 
 ```bash
-python script.py
+python app/script.py
 ```
 
 Usa diretamente o que estiver no `config.yml`.
 
-Para cada tecnologia são gerados, em `procedimentos/<tecnologia>/`:
+Para cada tecnologia são gerados, em `app/procedimentos/<tecnologia>/`:
 
 | Arquivo | Conteúdo |
 |---|---|
