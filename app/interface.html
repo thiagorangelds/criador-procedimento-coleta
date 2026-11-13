@@ -106,21 +106,22 @@
     main { padding: 16px; gap: 16px; }
   }
 
-  /* ---- Card: bg card, 1px solid #303343, raio 4, padding 24 ---- */
-  .principal, .configuracao {
+  /* ---- CardContainer: bg card, 1px solid #303343, raio 4, padding 24 ---- */
+  .principal, .cartao {
     background: var(--sec-930);
     border: 1px solid var(--sec-800);
     border-radius: var(--raio);
   }
-  .principal { padding: 24px; }
+  .principal, .cartao { padding: 24px; }
+  /* CardTitle fica DENTRO do card, nos dois lados — é o que alinha as colunas */
   h2, .principal > label {
     font-size: 14px;
     font-weight: 500;
     line-height: 19px;
     color: #fff;
   }
-  h2 { margin-bottom: 12px; }
-  .bloco + .bloco { margin-top: 24px; }
+  h2 { margin-bottom: 16px; }
+  .cartao + .cartao { margin-top: 24px; }
 
   /* ---- linhas de tecnologia ---- */
   .tec-cabecalho, .tec-linha {
@@ -131,6 +132,9 @@
   }
   .tec-cabecalho { font-size: 12px; color: var(--sec-300); margin-bottom: 8px; }
   .tec-linha + .tec-linha { margin-top: 8px; }
+  .tec-linha .tec-nome { grid-area: 1 / 1; }
+  .tec-linha .tec-forma { grid-area: 1 / 2; }
+  .tec-linha .tec-remover { grid-area: 1 / 3; }
   .tec-remover {
     padding: 0;
     width: 32px;
@@ -149,19 +153,16 @@
     .tec-cabecalho { display: none; }
     .tec-linha {
       grid-template-columns: minmax(0, 1fr) 32px;
-      gap: 8px;
-      padding-bottom: 12px;
+      gap: 6px 8px;
+      padding-bottom: 14px;
       border-bottom: 1px solid var(--sec-800);
     }
-    .tec-linha .tec-nome { grid-area: 1 / 1; }
-    .tec-linha .tec-remover { grid-area: 1 / 2; }
-    .tec-linha .tec-rotulo {
-      display: block;
-      grid-area: 2 / 1 / 2 / 3;
-      font-size: 12px;
-      color: var(--sec-300);
-    }
-    .tec-linha .tec-forma { grid-area: 3 / 1 / 3 / 3; }
+    .tec-linha .tec-rotulo { display: block; font-size: 12px; color: var(--sec-300); }
+    .tec-linha .tec-rotulo-nome { grid-area: 1 / 1 / 1 / 3; }
+    .tec-linha .tec-nome { grid-area: 2 / 1; }
+    .tec-linha .tec-remover { grid-area: 2 / 2; }
+    .tec-linha .tec-rotulo-forma { grid-area: 3 / 1 / 3 / 3; margin-top: 6px; }
+    .tec-linha .tec-forma { grid-area: 4 / 1 / 4 / 3; }
   }
 
   /* ---- campos: Label 14/400 mb 8; Input 48px, padding 16, raio 4 ---- */
@@ -220,6 +221,8 @@
     justify-content: center;
     gap: 8px;
   }
+  /* o display acima vence o display:none que o atributo hidden aplica pela UA */
+  button[hidden] { display: none; }
   button:hover:not(:disabled) { background: var(--sec-950); }
   /* ApplyButton: fundo teal escuro, texto teal claro — não é preenchimento sólido */
   button.primario { background: var(--pri-950); border-color: var(--pri-900); color: var(--pri-400); }
@@ -234,40 +237,74 @@
   .mensagem.ok { color: var(--pri-400); }
   .mensagem ul { margin: 0; padding-left: 18px; }
 
-  /* ---- configuração ---- */
-  .configuracao { margin-top: 16px; }
-  .configuracao summary {
-    cursor: pointer;
-    padding: 16px 24px;
-    font-size: 14px;
-    font-weight: 500;
-    color: #fff;
-    list-style: none;
+  /* ---- engrenagem na topbar, no papel do iconButton ---- */
+  .engrenagem {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin-left: 4px;
+    color: var(--sec-300);
+    border-color: transparent;
+  }
+  .engrenagem:hover:not(:disabled) { background: var(--sec-900); border-color: var(--sec-800); color: #fff; }
+  .aviso-config {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--atencao);
+    box-shadow: 0 0 0 2px var(--sec-950);
+  }
+
+  /* ---- modal de configuração, no padrão ModalContainerForm ---- */
+  .modal {
+    width: min(560px, calc(100vw - 32px));
+    max-height: calc(100vh - 64px);
+    margin: auto;  /* o reset zerou o margin que centraliza o dialog */
+    padding: 0;
+    border: 1px solid var(--sec-800);
+    border-radius: var(--raio);
+    background: var(--sec-930);
+    color: var(--texto);
+    overflow: hidden;
+  }
+  .modal[open] { display: flex; flex-direction: column; }
+  .modal::backdrop { background: rgba(10, 11, 16, .65); }
+  .modal:not([open]) { display: none; }
+  .modal-topo {
+    flex: none;
     display: flex;
-    flex-wrap: wrap;
-    gap: 2px 8px;
-    align-items: baseline;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--sec-800);
   }
-  .configuracao summary::-webkit-details-marker { display: none; }
-  .configuracao summary::before {
-    content: "";
-    width: 5px; height: 5px;
-    border-right: 1.5px solid var(--sec-400);
-    border-bottom: 1.5px solid var(--sec-400);
-    transform: rotate(-45deg);
-    transition: transform .15s;
-    align-self: flex-start;
-    margin-top: 6px;
+  .modal-topo h2 { margin: 0; }
+  .modal-sub { font-size: 12px; color: var(--sec-300); margin-top: 4px; }
+  .modal-sub:empty { display: none; }
+  .icone-fechar {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    flex: none;
+    color: var(--sec-300);
+    border-color: transparent;
   }
-  .configuracao[open] summary::before { transform: rotate(45deg); }
-  .configuracao summary span { color: var(--sec-300); font-weight: 400; }
-  .campos {
-    display: grid;
-    gap: 20px;
-    padding: 20px 24px 24px;
+  .icone-fechar:hover:not(:disabled) { background: var(--sec-900); border-color: var(--sec-800); color: #fff; }
+  .modal-corpo { overflow-y: auto; min-height: 0; }
+  .campos { display: grid; gap: 20px; padding: 24px; }
+  .modal-rodape {
+    flex: none;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 16px 24px;
     border-top: 1px solid var(--sec-800);
   }
-  .campos .acoes { margin-top: 0; }
 
   #modelos-selecionados { margin-top: 12px; list-style: none; counter-reset: ordem; }
   #modelos-selecionados li {
@@ -305,9 +342,9 @@
 
   /* ---- log ---- */
   #log {
-    background: var(--sec-930);
+    background: var(--sec-950);
     color: var(--sec-300);
-    border: 1px solid var(--sec-800);
+    border: 0;
     border-radius: var(--raio);
     padding: 16px;
     height: clamp(240px, 36vh, 420px);
@@ -321,11 +358,7 @@
   .log-aviso { color: var(--atencao); }
 
   /* ---- tabela: header #AEB4CB, fundo #212330, hover #313343 ---- */
-  .tabela {
-    overflow-x: auto;
-    border: 1px solid var(--sec-800);
-    border-radius: var(--raio);
-  }
+  .tabela { overflow-x: auto; border-radius: var(--raio); }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   thead th {
     background: var(--sec-900);
@@ -335,12 +368,14 @@
     text-align: left;
     padding: 12px 16px;
   }
+  thead th:first-child { border-radius: var(--raio) 0 0 var(--raio); }
+  thead th:last-child { border-radius: 0 var(--raio) var(--raio) 0; }
   td { padding: 12px 16px; border-top: 1px solid var(--sec-800); color: var(--sec-300); }
   tbody tr:hover td { background: var(--hover); }
   td.num { white-space: nowrap; font-size: 13px; }
   a { color: var(--pri-400); text-decoration: none; }
   a:hover { text-decoration: underline; }
-  .vazio { color: var(--sec-400); font-size: 14px; padding: 16px; }
+  .vazio { color: var(--sec-400); font-size: 14px; }
 </style>
 </head>
 <body>
@@ -351,6 +386,13 @@
       <p class="sub">Documentação de coleta de logs, gerada por tecnologia.</p>
     </div>
     <span class="status" id="status"><span class="ponto" aria-hidden="true"></span><span id="status-texto">Parado</span></span>
+    <button type="button" class="engrenagem" id="abrir-config" aria-haspopup="dialog" aria-label="Configuração" title="Configuração">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.35.4.65.73.86.3.19.65.29 1 .29H21a2 2 0 1 1 0 4h-.09c-.7 0-1.33.42-1.6 1.06Z"/>
+      </svg>
+      <span class="aviso-config" id="aviso-config" hidden aria-hidden="true"></span>
+    </button>
   </div>
 </header>
 
@@ -372,9 +414,35 @@
       <div class="mensagem" id="mensagem" role="status"></div>
     </div>
 
-    <details class="configuracao" id="configuracao">
-      <summary>Configuração <span id="resumo-config"></span></summary>
-      <div class="campos">
+  </form>
+
+  <div class="saida">
+    <section class="cartao" aria-labelledby="titulo-andamento">
+      <h2 id="titulo-andamento">Andamento</h2>
+      <pre id="log" class="styled-scroll-bar" role="log" tabindex="0" aria-label="Log da geração"></pre>
+    </section>
+
+    <section class="cartao" aria-labelledby="titulo-documentos">
+      <h2 id="titulo-documentos">Documentos gerados</h2>
+      <div id="arquivos" class="tabela"></div>
+    </section>
+  </div>
+</main>
+
+<dialog class="modal" id="configuracao" aria-labelledby="titulo-config">
+  <div class="modal-topo">
+    <div>
+      <h2 id="titulo-config">Configuração</h2>
+      <p class="modal-sub" id="resumo-config"></p>
+    </div>
+    <button type="button" class="icone-fechar" id="fechar-config" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+  <div class="modal-corpo styled-scroll-bar">
+    <div class="campos">
         <div>
           <label for="API_KEY">API key do Gemini</label>
           <div class="linha">
@@ -418,25 +486,13 @@
           <input type="number" id="RETRY" min="1" max="20" aria-describedby="dica-retry">
           <span class="hint" id="dica-retry">Quando a API recusa por limite de uso ou indisponibilidade.</span>
         </div>
-        <div class="acoes">
-          <button type="button" id="salvar">Salvar configuração</button>
-        </div>
-      </div>
-    </details>
-  </form>
-
-  <div class="saida">
-    <section class="bloco" aria-labelledby="titulo-andamento">
-      <h2 id="titulo-andamento">Andamento</h2>
-      <pre id="log" class="styled-scroll-bar" role="log" tabindex="0" aria-label="Log da geração"></pre>
-    </section>
-
-    <section class="bloco" aria-labelledby="titulo-documentos">
-      <h2 id="titulo-documentos">Documentos gerados</h2>
-      <div id="arquivos" class="tabela"></div>
-    </section>
+    </div>
   </div>
-</main>
+  <div class="modal-rodape">
+    <button type="button" id="fechar-config-rodape">Fechar</button>
+    <button type="button" class="primario" id="salvar">Salvar configuração</button>
+  </div>
+</dialog>
 <script>
   const $ = (id) => document.getElementById(id);
   const VAZIO = "Os documentos aparecem aqui depois que você clicar em Gerar documentos.";
@@ -467,12 +523,11 @@
     return forma ? tecnologia + SEPARADOR + forma : tecnologia;
   }
 
-  function campoTecnologia(classe, rotulo, dica, valor) {
+  function campoTecnologia(classe, rotulo, valor) {
     const campo = document.createElement("input");
     campo.type = "text";
     campo.className = classe;
     campo.value = valor;
-    campo.placeholder = dica;
     campo.spellcheck = false;
     campo.setAttribute("aria-label", rotulo);
     campo.addEventListener("keydown", (evento) => {
@@ -493,14 +548,19 @@
       if (!$("tecnologias").children.length) adicionarTecnologia();
     });
     remover.className = "tec-remover";
-    const rotulo = document.createElement("span");
-    rotulo.className = "tec-rotulo";
-    rotulo.textContent = "Forma de coleta (opcional)";
-    rotulo.setAttribute("aria-hidden", "true");
+    // No estreito o cabeçalho de colunas some, então cada campo leva o seu rótulo.
+    const rotulo = (classe, texto) => {
+      const span = document.createElement("span");
+      span.className = "tec-rotulo " + classe;
+      span.textContent = texto;
+      span.setAttribute("aria-hidden", "true");
+      return span;
+    };
     linha.append(
-      campoTecnologia("tec-nome", "Tecnologia", "AWS GuardDuty", tecnologia || ""),
-      rotulo,
-      campoTecnologia("tec-forma", "Forma de coleta (opcional)", "S3 + SQS", forma || ""),
+      rotulo("tec-rotulo-nome", "Tecnologia"),
+      campoTecnologia("tec-nome", "Tecnologia", tecnologia || ""),
+      rotulo("tec-rotulo-forma", "Forma de coleta (opcional)"),
+      campoTecnologia("tec-forma", "Forma de coleta (opcional)", forma || ""),
       remover,
     );
     $("tecnologias").appendChild(linha);
@@ -618,12 +678,16 @@
   }
 
   function atualizarResumo() {
-    const chave = $("API_KEY").value.trim() ? "API key salva" : "falta a API key";
-    $("resumo-config").textContent = `(${chave}, formato ${formatoSelecionado().toUpperCase()})`;
+    const temChave = !!$("API_KEY").value.trim();
+    const chave = temChave ? "API key salva" : "falta a API key";
+    $("resumo-config").textContent = `${chave} · formato ${formatoSelecionado().toUpperCase()}`;
+    $("aviso-config").hidden = temChave;
+    $("abrir-config").title = temChave ? "Configuração" : "Configuração — falta a API key";
   }
 
   function abrirConfiguracao(focarChave) {
-    $("configuracao").open = true;
+    const modal = $("configuracao");
+    if (!modal.open) modal.showModal();
     if (focarChave) $("API_KEY").focus();
   }
 
@@ -794,6 +858,11 @@
     botao.setAttribute("aria-pressed", String(mostrar));
     botao.setAttribute("aria-label", mostrar ? "Ocultar API key" : "Mostrar API key");
   });
+
+  $("abrir-config").addEventListener("click", () => abrirConfiguracao(false));
+  const fechar = () => $("configuracao").close();
+  $("fechar-config").addEventListener("click", fechar);
+  $("fechar-config-rodape").addEventListener("click", fechar);
 
   $("adicionar-tecnologia").addEventListener("click", () => {
     adicionarTecnologia().querySelector(".tec-nome").focus();
