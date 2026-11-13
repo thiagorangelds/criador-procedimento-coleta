@@ -33,6 +33,7 @@
     --pri-hover: rgba(18, 186, 171, .2);
 
     /* escalas semânticas */
+    --azul-doc: #558eff;  /* blue400 */
     --erro: #e5484d;
     --erro-bg: #e5484d1a;
     --atencao: #ffe47c;
@@ -372,9 +373,46 @@
   thead th:last-child { border-radius: 0 var(--raio) var(--raio) 0; }
   td { padding: 12px 16px; border-top: 1px solid var(--sec-800); color: var(--sec-300); }
   tbody tr:hover td { background: var(--hover); }
+
+  /* linha de categoria: só o thead tem fundo, senão vira um bloco cinza só */
+  .grupo th { padding: 0; border-top: 1px solid var(--sec-700); }
+  tbody:first-of-type .grupo th { border-top: 0; }
+  .botao-grupo {
+    width: 100%;
+    height: auto;
+    padding: 14px 16px 12px;
+    gap: 10px;
+    justify-content: flex-start;
+    text-align: left;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .botao-grupo:hover:not(:disabled) { background: var(--sec-900); color: #fff; }
+  .botao-grupo .seta {
+    flex: none;
+    width: 5px;
+    height: 5px;
+    border-right: 1.5px solid var(--sec-400);
+    border-bottom: 1.5px solid var(--sec-400);
+    transform: rotate(-45deg);
+    transition: transform .15s;
+  }
+  .botao-grupo[aria-expanded="true"] .seta { transform: rotate(45deg); }
+  @media (prefers-reduced-motion: reduce) { .botao-grupo .seta { transition: none; } }
+  .nome-grupo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .contagem { color: var(--sec-400); font-weight: 400; }
+  .grupo + tr td { border-top: 0; }
+  /* o nome perde o prefixo da pasta, então ganha um recuo que mostra a hierarquia */
+  tbody td:first-child { padding-left: 28px; }
   td.num { white-space: nowrap; font-size: 13px; }
   a { color: var(--pri-400); text-decoration: none; }
   a:hover { text-decoration: underline; }
+  td a { display: inline-flex; align-items: center; gap: 8px; }
+  .icone-arquivo { flex: none; }
   .vazio { color: var(--sec-400); font-size: 14px; }
 </style>
 </head>
@@ -793,30 +831,160 @@
     alvo.replaceChildren(p);
   }
 
+  function agruparPorPasta(arquivos) {
+    // A API já devolve do mais recente para o mais antigo, e o Map preserva a
+    // ordem de inserção: a tecnologia gerada por último fica em cima, e dentro
+    // de cada uma os arquivos seguem a mesma ordem.
+    const grupos = new Map();
+    arquivos.forEach((a) => {
+      const barra = a.caminho.indexOf("/");
+      const pasta = barra === -1 ? "" : a.caminho.slice(0, barra);
+      const nome = barra === -1 ? a.caminho : a.caminho.slice(barra + 1);
+      if (!grupos.has(pasta)) grupos.set(pasta, []);
+      grupos.get(pasta).push({ ...a, nome });
+    });
+    return grupos;
+  }
+
+  function linhaDeGrupo(pasta, quantidade, aberta, aoAlternar) {
+    const tr = document.createElement("tr");
+    tr.className = "grupo";
+    const th = document.createElement("th");
+    th.colSpan = 3;
+    th.scope = "colgroup";
+
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "botao-grupo";
+    botao.setAttribute("aria-expanded", String(aberta));
+
+    const seta = document.createElement("span");
+    seta.className = "seta";
+    seta.setAttribute("aria-hidden", "true");
+
+    const nome = document.createElement("span");
+    nome.className = "nome-grupo";
+    nome.textContent = pasta || "Fora de uma pasta";
+
+    const contagem = document.createElement("span");
+    contagem.className = "contagem";
+    contagem.textContent = quantidade === 1 ? "1 arquivo" : `${quantidade} arquivos`;
+
+    botao.append(seta, nome, contagem);
+    botao.addEventListener("click", aoAlternar);
+    th.appendChild(botao);
+    tr.appendChild(th);
+    return tr;
+  }
+
+  // Cor por extensão, na convenção que editores usam: documento em azul,
+  // PDF em vermelho, texto sem cor própria.
+  const COR_POR_EXTENSAO = {
+    docx: "var(--azul-doc)",
+    doc: "var(--azul-doc)",
+    pdf: "var(--erro)",
+    txt: "var(--sec-400)",
+  };
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  function iconeDeArquivo(nome) {
+    const extensao = nome.includes(".") ? nome.split(".").pop().toLowerCase() : "";
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("viewBox", "0 0 16 16");
+    svg.setAttribute("width", "15");
+    svg.setAttribute("height", "15");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("aria-hidden", "true");
+    svg.classList.add("icone-arquivo");
+    svg.style.color = COR_POR_EXTENSAO[extensao] || "var(--sec-400)";
+
+    // folha com o canto dobrado
+    const folha = document.createElementNS(SVG_NS, "path");
+    folha.setAttribute("d", "M9 1.5H4.5A1.5 1.5 0 0 0 3 3v10a1.5 1.5 0 0 0 1.5 1.5h7A1.5 1.5 0 0 0 13 13V5.5L9 1.5Z");
+    folha.setAttribute("stroke", "currentColor");
+    folha.setAttribute("stroke-width", "1.2");
+    folha.setAttribute("stroke-linejoin", "round");
+
+    const dobra = document.createElementNS(SVG_NS, "path");
+    dobra.setAttribute("d", "M9 1.5V5.5H13");
+    dobra.setAttribute("stroke", "currentColor");
+    dobra.setAttribute("stroke-width", "1.2");
+    dobra.setAttribute("stroke-linejoin", "round");
+
+    svg.append(folha, dobra);
+    // linhas de texto dentro da folha, menos para o PDF
+    if (extensao !== "pdf") {
+      const linhas = document.createElementNS(SVG_NS, "path");
+      linhas.setAttribute("d", extensao === "txt" ? "M5.5 8h5M5.5 10.5h5" : "M5.5 8.5h5M5.5 11h3");
+      linhas.setAttribute("stroke", "currentColor");
+      linhas.setAttribute("stroke-width", "1.2");
+      linhas.setAttribute("stroke-linecap", "round");
+      linhas.setAttribute("opacity", ".65");
+      svg.appendChild(linhas);
+    }
+    return svg;
+  }
+
+  function linhaDeArquivo(a) {
+    const tr = document.createElement("tr");
+    const tdNome = document.createElement("td");
+    const link = document.createElement("a");
+    link.href = "/arquivos/" + a.caminho.split("/").map(encodeURIComponent).join("/");
+    link.append(iconeDeArquivo(a.nome), document.createTextNode(a.nome));  // a pasta já está na linha do grupo
+    tdNome.appendChild(link);
+    const tdTamanho = document.createElement("td");
+    tdTamanho.className = "num";
+    tdTamanho.textContent = formatarTamanho(a.tamanho);
+    const tdData = document.createElement("td");
+    tdData.className = "num";
+    tdData.textContent = new Date(a.modificado * 1000).toLocaleString("pt-BR");
+    tr.append(tdNome, tdTamanho, tdData);
+    return tr;
+  }
+
+  // A lista é recarregada ao fim de cada geração, então o que o usuário abriu
+  // precisa sobreviver à re-renderização.
+  const pastasAbertas = new Set();
+  const pastasVistas = new Set();
+  let primeiraListagem = true;
+
+  function ajustarPastasAbertas(pastas) {
+    // Na primeira listagem só a mais recente abre. Depois, pasta que acabou de
+    // surgir abre sozinha: é o resultado da geração que terminou agora.
+    pastas.forEach((pasta, i) => {
+      if (pastasVistas.has(pasta)) return;
+      pastasVistas.add(pasta);
+      if (!primeiraListagem || i === 0) pastasAbertas.add(pasta);
+    });
+    primeiraListagem = false;
+  }
+
   async function carregarArquivos() {
     const { ok, dados } = await requisitar("/api/arquivos");
     const alvo = $("arquivos");
     if (!ok || !dados.arquivos.length) { mostrarVazio(alvo); return; }
+    const grupos = agruparPorPasta(dados.arquivos);
+    ajustarPastasAbertas([...grupos.keys()]);
+
     const tabela = document.createElement("table");
     tabela.innerHTML = "<thead><tr><th>Arquivo</th><th>Tamanho</th><th>Gerado em</th></tr></thead>";
-    const corpo = document.createElement("tbody");
-    dados.arquivos.forEach((a) => {
-      const tr = document.createElement("tr");
-      const tdNome = document.createElement("td");
-      const link = document.createElement("a");
-      link.href = "/arquivos/" + a.caminho.split("/").map(encodeURIComponent).join("/");
-      link.textContent = a.caminho;
-      tdNome.appendChild(link);
-      const tdTamanho = document.createElement("td");
-      tdTamanho.className = "num";
-      tdTamanho.textContent = formatarTamanho(a.tamanho);
-      const tdData = document.createElement("td");
-      tdData.className = "num";
-      tdData.textContent = new Date(a.modificado * 1000).toLocaleString("pt-BR");
-      tr.append(tdNome, tdTamanho, tdData);
-      corpo.appendChild(tr);
+    grupos.forEach((arquivos, pasta) => {
+      const corpo = document.createElement("tbody");
+      const linhas = arquivos.map(linhaDeArquivo);
+      const aplicar = (aberta) => {
+        corpo.firstChild.querySelector(".botao-grupo").setAttribute("aria-expanded", String(aberta));
+        linhas.forEach((tr) => { tr.hidden = !aberta; });
+      };
+      const alternar = () => {
+        const aberta = !pastasAbertas.has(pasta);
+        if (aberta) pastasAbertas.add(pasta); else pastasAbertas.delete(pasta);
+        aplicar(aberta);
+      };
+      corpo.appendChild(linhaDeGrupo(pasta, arquivos.length, pastasAbertas.has(pasta), alternar));
+      linhas.forEach((tr) => corpo.appendChild(tr));
+      aplicar(pastasAbertas.has(pasta));
+      tabela.appendChild(corpo);
     });
-    tabela.appendChild(corpo);
     alvo.replaceChildren(tabela);
   }
 
