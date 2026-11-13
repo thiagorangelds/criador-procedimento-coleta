@@ -6,175 +6,334 @@
 <title>Procedimento de Coleta</title>
 <style>
   :root {
-    --bg: #f4f6f8;
-    --surface: #ffffff;
-    --text: #1f2933;
-    --muted: #5f6b7a;
-    --border: #d7dde4;
-    --accent: #0097a7;
-    --accent-text: #ffffff;
-    --danger: #c62828;
-    --ok: #2e7d32;
-    --log-bg: #10161d;
-    --log-text: #d6e2ec;
-    --log-erro: #ff8a80;
-    --log-aviso: #ffd54f;
-    --input-bg: #ffffff;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #141a20;
-      --surface: #1c242d;
-      --text: #e3e9ef;
-      --muted: #9aa7b4;
-      --border: #2f3a46;
-      --accent: #26c6da;
-      --accent-text: #08262b;
-      --danger: #ef5350;
-      --ok: #66bb6a;
-      --log-bg: #0d1217;
-      --input-bg: #161d24;
-    }
+    color-scheme: dark;
+    --void: #06090e;
+    --panel: #0d131a;
+    --inset: #11181f;
+    --line: #1c2630;
+    --line-soft: #151d25;
+    --teal: #00c3a5;
+    --teal-press: #00a88e;
+    --teal-text: #35d6bb;
+    --teal-veu: rgba(0, 195, 165, .09);
+    --ink: #eef3f6;
+    --ink-2: #c3cdd6;
+    --mute: #7f8d9a;
+    --amber: #e0b341;
+    --red: #ff7a72;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--void);
+    color: var(--ink);
+    font: 15px/1.55 var(--sans);
+    -webkit-font-smoothing: antialiased;
   }
-  main { max-width: 880px; margin: 0 auto; padding: 32px 16px 56px; }
-  h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; }
-  .sub { color: var(--muted); margin: 0 0 24px; max-width: 64ch; }
-  h2 { font-size: 17px; margin: 0; }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 2px; }
+
+  /* ---- barra de topo: identidade e estado, sempre visíveis ---- */
+  .topo {
+    border-bottom: 1px solid var(--line);
+    background:
+      radial-gradient(circle at center, rgba(0, 195, 165, .16) 1px, transparent 1.2px) 0 0 / 22px 22px,
+      var(--panel);
+  }
+  .topo-interno {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 18px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 20px;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -.015em;
+    margin: 0;
+  }
+  .sub { color: var(--mute); margin: 0; font-size: 14px; max-width: 58ch; }
+  .status {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--mute);
+    align-self: center;
+  }
+  .ponto { width: 7px; height: 7px; border-radius: 50%; background: #35424e; }
+  .status.ativo { color: var(--teal-text); }
+  .status.ativo .ponto { background: var(--teal); box-shadow: 0 0 0 4px var(--teal-veu); animation: pulso 1.4s ease-in-out infinite; }
+  @keyframes pulso { 50% { opacity: .25; } }
+  @media (prefers-reduced-motion: reduce) { .status.ativo .ponto { animation: none; } }
+
+  /* ---- duas colunas: controle à esquerda, saída à direita ---- */
+  main {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 24px 64px;
+    display: grid;
+    grid-template-columns: minmax(0, 470px) minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 980px) { main { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 620px) {
+    .topo-interno { padding: 16px; gap: 4px 0; }
+    .status { margin-left: 0; margin-top: 4px; align-self: flex-start; }
+    main { padding: 20px 16px 48px; gap: 24px; }
+  }
+
+  h2 { font-size: 15px; font-weight: 600; margin: 0 0 10px; letter-spacing: -.01em; }
+  .bloco + .bloco { margin-top: 28px; }
 
   .principal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-top: 4px solid var(--accent);
-    border-radius: 10px;
-    padding: 20px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px;
   }
-  .principal label { font-size: 17px; }
-  #TECNOLOGIAS { min-height: 150px; font-size: 16px; }
+  .principal > label { font-size: 15px; }
 
-  label, legend { display: block; font-weight: 600; margin-bottom: 4px; padding: 0; }
-  .hint { display: block; color: var(--muted); font-size: 13px; font-weight: 400; margin-top: 4px; }
-  .opcional { color: var(--muted); font-weight: 400; }
+  /* ---- linhas de tecnologia: nome + forma de coleta ---- */
+  .tec-cabecalho, .tec-linha {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) 28px;
+    gap: 8px;
+    align-items: center;
+  }
+  .tec-cabecalho {
+    font-size: 12px;
+    color: var(--mute);
+    margin-bottom: 6px;
+  }
+  .tec-linha + .tec-linha { margin-top: 8px; }
+  .tec-linha input { font-size: 15px; }
+  .tec-remover {
+    padding: 0;
+    width: 28px;
+    height: 32px;
+    border: 0;
+    color: var(--mute);
+    font-size: 17px;
+    line-height: 1;
+    border-radius: 4px;
+  }
+  .tec-remover:hover:not(:disabled) { color: var(--red); background: rgba(255, 122, 114, .09); }
+  #adicionar-tecnologia { margin-top: 10px; padding: 6px 12px; font-size: 13px; }
+  .tec-rotulo { display: none; }
+  @media (max-width: 520px) {
+    .tec-cabecalho { display: none; }
+    .tec-linha {
+      grid-template-columns: minmax(0, 1fr) 28px;
+      gap: 6px 8px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .tec-linha .tec-nome { grid-area: 1 / 1; }
+    .tec-linha .tec-remover { grid-area: 1 / 2; }
+    .tec-linha .tec-rotulo {
+      display: block;
+      grid-area: 2 / 1 / 2 / 3;
+      font-size: 12px;
+      color: var(--mute);
+    }
+    .tec-linha .tec-forma { grid-area: 3 / 1 / 3 / 3; }
+  }
+
+  label, legend { display: block; font-weight: 600; margin-bottom: 6px; padding: 0; }
+  .hint { display: block; color: var(--mute); font-size: 13px; font-weight: 400; margin-top: 6px; line-height: 1.45; }
+  .opcional { color: var(--mute); font-weight: 400; }
   input[type=text], input[type=password], input[type=number], textarea {
     width: 100%;
-    padding: 8px 10px;
-    border: 1px solid var(--border);
+    padding: 9px 11px;
+    border: 1px solid var(--line);
     border-radius: 6px;
-    background: var(--input-bg);
-    color: var(--text);
+    background: var(--inset);
+    color: var(--ink);
     font: inherit;
   }
-  textarea { min-height: 96px; resize: vertical; }
-  input:focus-visible, textarea:focus-visible { outline-offset: -1px; }
+  input::placeholder, textarea::placeholder { color: #5c6a77; }
+  textarea { min-height: 96px; resize: vertical; line-height: 1.6; }
+  input:focus-visible, textarea:focus-visible { outline-offset: -1px; border-color: var(--teal); }
   fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
   .radios { display: flex; gap: 20px; padding-top: 2px; }
-  .radios label { font-weight: 400; display: flex; gap: 6px; align-items: center; margin: 0; }
+  .radios label, .opcoes label { font-weight: 400; display: flex; gap: 8px; align-items: center; margin: 0; }
+  input[type=radio], input[type=checkbox] { accent-color: var(--teal); }
   .linha { display: flex; gap: 8px; }
   .linha input { flex: 1; min-width: 0; }
 
   button {
     font: inherit;
-    font-weight: 600;
-    padding: 9px 18px;
+    font-weight: 500;
+    padding: 9px 16px;
     border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink-2);
     cursor: pointer;
+    transition: border-color .12s, color .12s, background-color .12s;
   }
-  button.primario { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-  button.perigo { color: var(--danger); border-color: var(--danger); }
-  button:disabled { opacity: .5; cursor: not-allowed; }
+  button:hover:not(:disabled) { border-color: #2c3a47; color: var(--ink); }
+  button.primario {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: #042520;
+    font-weight: 600;
+  }
+  button.primario:hover:not(:disabled) { background: var(--teal-press); border-color: var(--teal-press); color: #042520; }
+  button.perigo { color: var(--red); border-color: #452d2d; }
+  button.perigo:hover:not(:disabled) { color: var(--red); border-color: var(--red); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
   .acoes { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
-  .mensagem { font-size: 14px; }
-  .mensagem.erro { color: var(--danger); }
-  .mensagem.ok { color: var(--ok); }
+  .mensagem { font-size: 14px; color: var(--mute); }
+  .mensagem.erro { color: var(--red); }
+  .mensagem.ok { color: var(--teal-text); }
   .mensagem ul { margin: 0; padding-left: 18px; }
 
-  .configuracao { margin-top: 16px; border-bottom: 1px solid var(--border); }
-  .configuracao summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
-  .configuracao summary span { color: var(--muted); font-weight: 400; }
-  .campos { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; padding: 4px 0 20px; }
-  .campos .acoes { grid-column: 1 / -1; margin-top: 0; }
-  @media (max-width: 720px) { .campos { grid-template-columns: 1fr; } }
-
-  .modelos { grid-column: 1 / -1; }
-  #modelos-selecionados { margin: 8px 0 0; padding-left: 24px; }
-  #modelos-selecionados li { padding: 4px 0; }
-  #modelos-selecionados li::marker { color: var(--muted); }
-  .item-modelo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .item-modelo .nome { flex: 1; min-width: 160px; }
-  .item-modelo button { padding: 3px 10px; font-size: 13px; font-weight: 500; }
-  .fora { color: var(--muted); font-size: 13px; }
-  .sem-modelos { color: var(--danger); font-size: 14px; list-style: none; margin-left: -24px; }
-  .seletor { margin-top: 10px; }
-  .seletor summary { cursor: pointer; color: var(--accent); font-weight: 600; width: fit-content; }
-  .seletor-painel {
-    margin-top: 8px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--surface);
-    padding: 10px 12px;
+  /* ---- configuração ---- */
+  .configuracao {
+    margin-top: 14px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
   }
-  .opcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 16px; }
-  .opcoes label { font-weight: 400; display: flex; gap: 8px; align-items: center; margin: 0; }
-  .seletor-rodape { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; }
-  .seletor-rodape .hint { margin: 0; }
-  .seletor-rodape button { padding: 5px 12px; font-size: 13px; }
+  .configuracao summary {
+    cursor: pointer;
+    padding: 13px 18px;
+    font-weight: 600;
+    font-size: 14px;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+    align-items: baseline;
+  }
+  .configuracao summary::-webkit-details-marker { display: none; }
+  .configuracao summary::before {
+    content: "";
+    width: 5px; height: 5px;
+    border-right: 1.5px solid var(--mute);
+    border-bottom: 1.5px solid var(--mute);
+    transform: rotate(-45deg);
+    transition: transform .15s;
+    align-self: flex-start;
+    margin-top: 6px;
+  }
+  .configuracao[open] summary::before { transform: rotate(45deg); }
+  .configuracao summary span { color: var(--mute); font-weight: 400; }
+  .campos {
+    display: grid;
+    gap: 18px;
+    padding: 4px 18px 18px;
+    border-top: 1px solid var(--line-soft);
+    margin-top: 2px;
+    padding-top: 18px;
+  }
+  .campos .acoes { margin-top: 0; }
 
-  section.bloco { margin-top: 32px; }
-  .cabecalho { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
-  .ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-  .status.ativo { color: var(--text); }
-  .status.ativo .ponto { background: var(--accent); animation: pulso 1.2s ease-in-out infinite; }
-  @keyframes pulso { 50% { opacity: .3; } }
-  @media (prefers-reduced-motion: reduce) { .status.ativo .ponto { animation: none; } }
+  #modelos-selecionados { margin: 10px 0 0; padding: 0; list-style: none; counter-reset: ordem; }
+  #modelos-selecionados li {
+    counter-increment: ordem;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  #modelos-selecionados li:last-child { border-bottom: 0; }
+  .item-modelo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .item-modelo .nome {
+    flex: 1;
+    min-width: 150px;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .item-modelo .nome::before {
+    content: counter(ordem) ".";
+    color: var(--mute);
+    margin-right: 8px;
+  }
+  .item-modelo button { padding: 3px 9px; font-size: 12px; }
+  .fora { color: var(--amber); font-size: 12px; font-family: var(--sans); }
+  .sem-modelos { color: var(--red); font-size: 14px; }
+  .seletor { margin-top: 12px; }
+  .seletor summary { cursor: pointer; color: var(--teal-text); font-weight: 500; font-size: 14px; width: fit-content; }
+  .seletor-painel {
+    margin-top: 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--inset);
+    padding: 12px;
+  }
+  .opcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px 16px; font-family: var(--mono); font-size: 13px; }
+  .seletor-rodape { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: 12px; }
+  .seletor-rodape .hint { margin: 0; }
+  .seletor-rodape button { padding: 5px 11px; font-size: 13px; }
+
+  /* ---- o log é o instrumento: trilho que acende enquanto roda ---- */
   #log {
     margin: 0;
-    background: var(--log-bg);
-    color: var(--log-text);
-    border-radius: 6px;
-    padding: 12px;
-    height: 260px;
+    background: #04070a;
+    color: var(--ink-2);
+    border: 1px solid var(--line);
+    border-left: 3px solid #35424e;
+    border-radius: 8px;
+    padding: 14px 16px;
+    height: clamp(240px, 36vh, 420px);
     overflow: auto;
-    font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
+    font: 13px/1.65 var(--mono);
     white-space: pre-wrap;
     word-break: break-word;
+    transition: border-left-color .2s;
   }
-  .log-erro { color: var(--log-erro); }
-  .log-aviso { color: var(--log-aviso); }
+  .executando #log { border-left-color: var(--teal); }
+  #log:empty::before {
+    content: "Nada rodando. O andamento de cada tecnologia aparece aqui.";
+    color: #5c6a77;
+  }
+  .log-erro { color: var(--red); }
+  .log-aviso { color: var(--amber); }
+
   .tabela { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); font-weight: 600; }
-  td.num { white-space: nowrap; color: var(--muted); }
-  a { color: var(--accent); }
-  .vazio { color: var(--muted); font-size: 14px; margin: 0; }
+  th, td { text-align: left; padding: 9px 10px 9px 0; border-bottom: 1px solid var(--line-soft); }
+  thead th { color: var(--mute); font-weight: 500; font-size: 13px; border-bottom-color: var(--line); }
+  td.num { white-space: nowrap; color: var(--mute); font-family: var(--mono); font-size: 13px; }
+  tbody tr:last-child td { border-bottom: 0; }
+  a { color: var(--teal-text); text-decoration-color: rgba(53, 214, 187, .35); text-underline-offset: 2px; }
+  a:hover { text-decoration-color: currentColor; }
+  td a { font-family: var(--mono); font-size: 13px; }
+  .vazio { color: var(--mute); font-size: 14px; margin: 0; }
 </style>
 </head>
 <body>
-<main>
-  <h1>Procedimento de Coleta</h1>
-  <p class="sub">Gere os documentos de coleta de logs de cada tecnologia. A configuração fica salva para as próximas vezes.</p>
+<header class="topo">
+  <div class="topo-interno">
+    <h1>Procedimento de Coleta</h1>
+    <p class="sub">Documentação de coleta de logs, gerada por tecnologia.</p>
+    <span class="status" id="status"><span class="ponto" aria-hidden="true"></span><span id="status-texto">Parado</span></span>
+  </div>
+</header>
 
+<main>
   <form id="form" autocomplete="off">
     <div class="principal">
-      <label for="TECNOLOGIAS">Tecnologias</label>
-      <textarea id="TECNOLOGIAS" placeholder="Fortinet FortiGate&#10;Microsoft Active Directory" spellcheck="false" aria-describedby="dica-tecnologias"></textarea>
-      <span class="hint" id="dica-tecnologias">Uma por linha. Cada tecnologia gera o documento completo e o Procedimento de Coleta.</span>
+      <label id="rotulo-tecnologias">Tecnologias</label>
+      <div class="tec-cabecalho" aria-hidden="true">
+        <span>Tecnologia</span>
+        <span>Forma de coleta <span class="opcional">(opcional)</span></span>
+      </div>
+      <div id="tecnologias" role="group" aria-labelledby="rotulo-tecnologias" aria-describedby="dica-tecnologias"></div>
+      <button type="button" id="adicionar-tecnologia">Adicionar tecnologia</button>
+      <span class="hint" id="dica-tecnologias">Cada linha gera o documento completo e o Procedimento de Coleta. Deixe a forma de coleta em branco quando ainda não souber qual é a melhor: o Gemini escolhe e justifica no documento.</span>
       <div class="acoes">
         <button type="submit" class="primario" id="gerar">Gerar documentos</button>
         <button type="button" class="perigo" id="cancelar" hidden>Parar geração</button>
-        <div class="mensagem" id="mensagem" role="status"></div>
       </div>
+      <div class="mensagem" id="mensagem" role="status"></div>
     </div>
 
     <details class="configuracao" id="configuracao">
@@ -230,22 +389,18 @@
     </details>
   </form>
 
-  <section class="bloco" aria-labelledby="titulo-andamento">
-    <div class="cabecalho">
+  <div class="saida">
+    <section class="bloco" aria-labelledby="titulo-andamento">
       <h2 id="titulo-andamento">Andamento</h2>
-      <span class="status" id="status"><span class="ponto" aria-hidden="true"></span><span id="status-texto">Parado</span></span>
-    </div>
-    <pre id="log" role="log" tabindex="0" aria-label="Log da geração"></pre>
-  </section>
+      <pre id="log" role="log" tabindex="0" aria-label="Log da geração"></pre>
+    </section>
 
-  <section class="bloco" aria-labelledby="titulo-documentos">
-    <div class="cabecalho">
+    <section class="bloco" aria-labelledby="titulo-documentos">
       <h2 id="titulo-documentos">Documentos gerados</h2>
-    </div>
-    <div id="arquivos" class="tabela"></div>
-  </section>
+      <div id="arquivos" class="tabela"></div>
+    </section>
+  </div>
 </main>
-
 <script>
   const $ = (id) => document.getElementById(id);
   const VAZIO = "Os documentos aparecem aqui depois que você clicar em Gerar documentos.";
@@ -262,6 +417,72 @@
     b.disabled = !!desabilitado;
     b.addEventListener("click", acao);
     return b;
+  }
+
+  const SEPARADOR = " via ";
+
+  function separarEntrada(linha) {
+    const corte = linha.indexOf(SEPARADOR);
+    if (corte === -1) return [linha.trim(), ""];
+    return [linha.slice(0, corte).trim(), linha.slice(corte + SEPARADOR.length).trim()];
+  }
+
+  function juntarEntrada(tecnologia, forma) {
+    return forma ? tecnologia + SEPARADOR + forma : tecnologia;
+  }
+
+  function campoTecnologia(classe, rotulo, dica, valor) {
+    const campo = document.createElement("input");
+    campo.type = "text";
+    campo.className = classe;
+    campo.value = valor;
+    campo.placeholder = dica;
+    campo.spellcheck = false;
+    campo.setAttribute("aria-label", rotulo);
+    campo.addEventListener("keydown", (evento) => {
+      if (evento.key !== "Enter") return;
+      evento.preventDefault();
+      const linha = campo.closest(".tec-linha");
+      const proxima = linha.nextElementSibling;
+      (proxima || adicionarTecnologia()).querySelector(".tec-nome").focus();
+    });
+    return campo;
+  }
+
+  function adicionarTecnologia(tecnologia, forma) {
+    const linha = document.createElement("div");
+    linha.className = "tec-linha";
+    const remover = botao("\u00d7", "Remover esta tecnologia", () => {
+      linha.remove();
+      if (!$("tecnologias").children.length) adicionarTecnologia();
+    });
+    remover.className = "tec-remover";
+    const rotulo = document.createElement("span");
+    rotulo.className = "tec-rotulo";
+    rotulo.textContent = "Forma de coleta (opcional)";
+    rotulo.setAttribute("aria-hidden", "true");
+    linha.append(
+      campoTecnologia("tec-nome", "Tecnologia", "AWS GuardDuty", tecnologia || ""),
+      rotulo,
+      campoTecnologia("tec-forma", "Forma de coleta (opcional)", "S3 + SQS", forma || ""),
+      remover,
+    );
+    $("tecnologias").appendChild(linha);
+    return linha;
+  }
+
+  function renderizarTecnologias(entradas) {
+    $("tecnologias").replaceChildren();
+    const linhas = (entradas || []).filter((e) => e && e.trim());
+    if (!linhas.length) { adicionarTecnologia(); return; }
+    linhas.forEach((entrada) => adicionarTecnologia(...separarEntrada(entrada)));
+  }
+
+  function lerTecnologias() {
+    return [...document.querySelectorAll(".tec-linha")]
+      .map((linha) => [linha.querySelector(".tec-nome").value.trim(), linha.querySelector(".tec-forma").value.trim()])
+      .filter(([tecnologia]) => tecnologia)
+      .map(([tecnologia, forma]) => juntarEntrada(tecnologia, forma));
   }
 
   function moverModelo(indice, deslocamento) {
@@ -373,7 +594,7 @@
   function lerFormulario() {
     return {
       API_KEY: $("API_KEY").value,
-      TECNOLOGIAS: $("TECNOLOGIAS").value.split("\n"),
+      TECNOLOGIAS: lerTecnologias(),
       MODELOS: modelosSelecionados.slice(),
       RETRY: $("RETRY").value,
       FORMATO_SAIDA: formatoSelecionado(),
@@ -402,7 +623,7 @@
     if (!ok) { mostrarMensagem(dados.erro || "Não foi possível ler a configuração salva.", "erro"); return; }
     const c = dados.config;
     $("API_KEY").value = c.API_KEY || "";
-    $("TECNOLOGIAS").value = (c.TECNOLOGIAS || []).join("\n");
+    renderizarTecnologias(c.TECNOLOGIAS);
     modelosSelecionados = c.MODELOS || [];
     renderizarModelos();
     $("RETRY").value = c.RETRY;
@@ -435,6 +656,7 @@
     $("salvar").disabled = executando;
     $("cancelar").hidden = !executando;
     $("status").classList.toggle("ativo", executando);
+    document.body.classList.toggle("executando", executando);
     $("status-texto").textContent = executando ? "Gerando" : "Parado";
   }
 
@@ -538,6 +760,10 @@
     botao.setAttribute("aria-label", mostrar ? "Ocultar API key" : "Mostrar API key");
   });
 
+  $("adicionar-tecnologia").addEventListener("click", () => {
+    adicionarTecnologia().querySelector(".tec-nome").focus();
+  });
+
   $("atualizar-modelos").addEventListener("click", carregarModelos);
   $("API_KEY").addEventListener("change", () => { atualizarResumo(); carregarModelos(); });
 
@@ -547,6 +773,7 @@
   }));
 
   mostrarVazio($("arquivos"));
+  adicionarTecnologia();
   carregarConfiguracao();
   carregarArquivos();
   acompanhar();
