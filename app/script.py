@@ -86,6 +86,8 @@ def gerar_resposta_gemini_com_fallback(prompt: str, api_key: str, modelos: list,
 
 def montar_prompt_documento_completo(tecnologia: str) -> str:
     return f'''
+Responda em português do Brasil, com a acentuação e a cedilha corretas em todas as palavras (solução, análise, segurança, tráfego, configuração). Nunca escreva sem acento nem transcreva para ASCII.
+
 Tecnologia-Alvo: {tecnologia}
 
 1. Requisitos e Métodos de Coleta de Logs
@@ -141,6 +143,8 @@ Responda SOMENTE com um JSON válido, em português, no formato:
 }}
 
 Regras: texto puro, sem markdown (sem **, #, crases ou listas com hífen dentro das strings); não numere os títulos dos passos; onde houver valores do ambiente do cliente use marcadores como <IP_DO_COLETOR> e <PORTA>.
+
+Acentuação: escreva em português do Brasil com a acentuação e a cedilha corretas em todas as palavras (solução, análise, segurança, tráfego, endereço, pré-requisito). Nunca escreva sem acento nem transcreva para ASCII, mesmo que o levantamento abaixo esteja sem acentos. Os acentos devem ser caracteres UTF-8 reais nas strings do JSON.
 
 --- LEVANTAMENTO ---
 {procedimento}
