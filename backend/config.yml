@@ -10,28 +10,28 @@ API_KEY: ""
 # Tentativas por modelo em caso de limite de taxa ou indisponibilidade da API.
 RETRY: 5
 
-# Modelos do Gemini, em ordem de preferência (fallback). O primeiro é usado
-# sempre; se ele atingir o limite ou ficar indisponível, o próximo assume.
+# Modelos do Gemini, em ordem de preferência. O primeiro é usado sempre; se ele
+# atingir o limite ou ficar indisponível, o próximo da lista assume.
 #
-# A ordem aqui é por QUALIDADE DO DOCUMENTO, não por data do modelo. Medido em
-# 2026-11-26 com uma key do free tier, na mesma tecnologia:
+# Aqui tem UM SÓ, de propósito. Medido em 2026-11-26 com uma key do free tier,
+# na mesma tecnologia, o modelo mais novo entrega cerca de um terço do conteúdo:
 #
-#   gemini-2.5-flash   levantamento 18 KB   catálogo ECS 9,4 KB
-#   gemini-3.6-flash   levantamento 6,8 KB  catálogo ECS 2,0 KB
+#   gemini-2.5-flash   levantamento 18 KB    catálogo ECS 9,4 KB
+#   gemini-3.6-flash   levantamento 6,8 KB   catálogo ECS 2,0 KB
 #
-# O mais novo é mais rápido e responde bem, mas entrega cerca de um terço do
-# conteúdo — e o catálogo é o que alimenta o parsing. Por isso ele fica como
-# fallback: documento mais enxuto é melhor que documento nenhum.
+# Cair num modelo mais fraco produziria um documento pela metade sem ninguém
+# perceber — o catálogo é o que alimenta o parsing. Entre documento raso e
+# nenhum documento, a escolha foi nenhum: o RETRY acima insiste no 2.5 com
+# backoff exponencial e, se não der, a geração falha e aparece no log.
 #
-# Sobre o resto da listagem da API, na mesma medição: os "flash" 3.7 e 3.8
-# devolvem 503 na maioria das chamadas, e cada 503 custa o backoff inteiro
-# antes de cair para o próximo da lista; os "omni" recusam direto com 429; e
+# Antes de acrescentar modelo aqui, meça. Na mesma data: os "flash" 3.7 e 3.8
+# devolvem 503 na maioria das chamadas, os "omni" recusam direto com 429, e
 # modelo aposentado pelo Google (gemini-2.0-flash, gemini-2.5-flash-lite)
-# responde 404 e também queima a vez dele. Confira com models.list() antes de
-# culpar a key.
+# responde 404 — e todo modelo que falha queima o backoff inteiro antes de a
+# geração seguir. models.list() LISTA MODELO QUE NÃO FUNCIONA: só a chamada de
+# verdade diz quais servem.
 MODELOS:
   - "gemini-2.5-flash"
-  - "gemini-3.6-flash"
 
 # Tecnologias padrão da geração por linha de comando (python gerar.py, sem
 # argumento). A interface e a API mandam a lista em cada pedido e ignoram esta.

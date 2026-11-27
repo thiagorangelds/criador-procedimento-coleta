@@ -117,7 +117,7 @@ Os ajustes de **geração** são relidos a cada pedido, então corrigir a API ke
 ### Geração
 
 - `API_KEY`: chave da API do Gemini, usada por todas as gerações do servidor.
-- `MODELOS`: modelos do Gemini, em ordem de preferência (fallback).
+- `MODELOS`: modelos do Gemini, em ordem de preferência. Vem com **um só**: o mais novo responde mais rápido, mas entrega cerca de um terço do conteúdo, e cair nele produziria um documento pela metade sem ninguém perceber. O `RETRY` insiste no mesmo modelo com backoff; se não der, a geração falha e aparece no log. Antes de acrescentar modelo, meça — o `config.yml` explica o porquê e `models.list()` lista modelo que não funciona.
 - `RETRY`: tentativas por modelo em caso de limite de taxa/indisponibilidade.
 - `FORMATO_SAIDA`: `docx` (padrão) ou `pdf`. Cada job pode pedir outro.
 - `MODELO_DOCX` (opcional): modelo Word do documento de procedimento. Padrão: `templates/modelo_procedimento_coleta.docx`.
