@@ -279,10 +279,39 @@ exigir_docker() {
 
 case "\${1:-}" in
     --atualizar)
-        # Carrega as variaveis desta instalacao: sem elas, uma instalacao em
-        # caminho customizado se atualizaria por cima da instalacao padrao.
-        exec env CRIADOR_REPO="$REPO" CRIADOR_BRANCH="$BRANCH" CRIADOR_DIR="$DIR" CRIADOR_BIN="$BIN_DIR" \
-            bash "$DIR/instalar.sh"
+        # Segunda camada da atualizacao. O instalar.sh ja se reexecuta sozinho
+        # quando percebe que mudou, mas isso so vale se a versao instalada tiver
+        # essa logica: numa instalacao antiga, o fluxo velho segue ate o fim
+        # usando as regras velhas e termina "com sucesso" no estado errado.
+        # Aqui a conferencia e por fora, entao nao depende do instalador.
+        #
+        # As variaveis vao junto: sem elas, uma instalacao em caminho
+        # customizado se atualizaria por cima da instalacao padrao.
+        rodar_instalador() {
+            env CRIADOR_REPO="$REPO" CRIADOR_BRANCH="$BRANCH" CRIADOR_DIR="$DIR" CRIADOR_BIN="$BIN_DIR" \
+                bash "$DIR/instalar.sh"
+        }
+        impressao() {
+            [ -f "$DIR/instalar.sh" ] || return 0
+            if command -v shasum >/dev/null 2>&1; then shasum "$DIR/instalar.sh" | cut -d" " -f1
+            elif command -v sha1sum >/dev/null 2>&1; then sha1sum "$DIR/instalar.sh" | cut -d" " -f1
+            else wc -c < "$DIR/instalar.sh" | tr -d " "; fi
+        }
+
+        antes="\$(impressao)"
+        rodar_instalador || saiu_com_erro=1
+        depois="\$(impressao)"
+
+        # Se o proprio instalador trocou durante a execucao, o que acabou de
+        # rodar foi a versao antiga. Roda a nova uma vez, e so uma: a guarda
+        # vai no ambiente para a segunda execucao nao repetir isto.
+        if [ -n "\$antes" ] && [ -n "\$depois" ] && [ "\$antes" != "\$depois" ]; then
+            printf '\033[1;36m==>\033[0m %s\n' "O instalador mudou durante a atualizacao. Rodando a versao nova."
+            exec env CRIADOR_INSTALADOR_REEXECUTADO=1 \
+                CRIADOR_REPO="$REPO" CRIADOR_BRANCH="$BRANCH" CRIADOR_DIR="$DIR" CRIADOR_BIN="$BIN_DIR" \
+                bash "$DIR/instalar.sh"
+        fi
+        exit "\${saiu_com_erro:-0}"
         ;;
     --parar)
         exigir_docker

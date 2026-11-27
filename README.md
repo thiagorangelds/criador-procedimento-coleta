@@ -71,11 +71,24 @@ curl -fsSL https://raw.githubusercontent.com/thiagorangelds/criador-procedimento
 
 As duas encerram o container se ele estiver no ar, atualizam o código, **reconstroem a imagem** e preservam o seu `config.yml` e os documentos já gerados.
 
-Se a atualização mudar o próprio `instalar.sh`, ele reexecuta a versão nova e segue por ela. Sem isso, o fluxo que já está na memória do bash continuaria validando o layout antigo contra a árvore nova e abortaria no meio — com o código já atualizado e o comando apontando para arquivos que acabaram de sair do lugar.
+### Quando a própria atualização muda o instalador
+
+O bash lê o script conforme executa, mas o fluxo que já está em memória é o da versão **antiga**. Depois de um `git pull` que mude a estrutura, ele seguiria validando o layout velho contra a árvore nova — abortando no meio, ou pior, terminando "com sucesso" no estado errado, com o código já atualizado e o comando apontando para arquivos que acabaram de sair do lugar.
+
+A atualização se corrige sozinha, em duas camadas independentes:
+
+| Camada | O que faz |
+|---|---|
+| `instalar.sh` | compara a própria impressão antes e depois do pull e, se mudou, `exec` na versão nova |
+| `criador-procedimento --atualizar` | confere o mesmo **por fora**, depois que o instalador termina, e roda a versão nova se ela tiver chegado |
+
+Duas porque a primeira só vale se a versão **já instalada** a tiver. Numa instalação anterior a ela, o fluxo velho vai até o fim com as regras velhas, e quem percebe é o comando. A guarda `CRIADOR_INSTALADOR_REEXECUTADO` garante no máximo uma repetição.
+
+O limite é honesto: isso não alcança uma instalação em que **as duas** camadas são antigas. Nessa, a primeira atualização ainda precisa ser rodada duas vezes — ou pelo `curl` abaixo, que executa o instalador novo desde o começo. A partir daí, nunca mais.
 
 **Vindo de uma versão que rodava Python na máquina:** o `.venv` da instalação é removido, porque não é mais usado. A configuração e os documentos continuam onde estão, e passam a ser montados dentro do container.
 
-**Vindo de uma versão anterior à divisão front/back:** a configuração e os documentos já gerados são movidos de `app/` para `backend/` automaticamente, e a pasta `app/` é removida quando não sobra nada seu nela. Vindo de uma versão anterior ainda à pasta `app/`, prefira o `curl`, que resolve numa execução só: pelo `criador-procedimento --atualizar`, a primeira execução termina com erro, porque ainda usa o instalador antigo, e a segunda conclui.
+**Vindo de uma versão anterior à divisão front/back:** a configuração e os documentos já gerados são movidos de `app/` para `backend/` automaticamente, e a pasta `app/` é removida quando não sobra nada seu nela. Vindo de uma versão anterior ainda à pasta `app/`, prefira o `curl`, pelo motivo da seção acima.
 
 ## Desinstalação
 
