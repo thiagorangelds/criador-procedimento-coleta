@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Instalador do Criador de Procedimento de Coleta (Linux/macOS).
 #
+# A aplicação roda SEMPRE em container. Antes havia dois caminhos — Python na
+# máquina ou container — e o da máquina não gerava PDF, porque o LibreOffice
+# não estava lá. Agora existe um só, e ele traz o LibreOffice dentro.
+#
 # Uso:
 #   bash instalar.sh               instala ou atualiza
 #   bash instalar.sh --desinstalar remove a instalação e o comando
@@ -30,6 +34,10 @@ DIR="${CRIADOR_DIR:-$HOME/.local/share/criador-procedimento-coleta}"
 INSTALADOR="$DIR/instalar.sh"
 BACK="$DIR/backend"
 BIN_DIR="${CRIADOR_BIN:-$HOME/.local/bin}"
+# Quem escolheu a pasta do comando escolheu de propósito: nesse caso o
+# instalador não planta atalho em pasta global, que sobrescreveria o comando
+# de uma instalação diferente na mesma máquina.
+BIN_ESCOLHIDO="${CRIADOR_BIN:+1}"
 COMANDO="criador-procedimento"
 MARCADOR_PATH="# criador-procedimento-coleta"
 PASTAS_ATALHO="$HOME/bin /opt/homebrew/bin /usr/local/bin"
@@ -51,9 +59,16 @@ arquivo_shell() {
 }
 
 parar_interface() {
+    if [ -f "$DIR/docker-compose.yml" ] && docker compose version >/dev/null 2>&1; then
+        if [ -n "$(docker compose -f "$DIR/docker-compose.yml" ps -q 2>/dev/null)" ]; then
+            docker compose -f "$DIR/docker-compose.yml" down >/dev/null 2>&1 || true
+            info "Container em execução encerrado."
+        fi
+    fi
+
+    # Sobras das versões que rodavam Python direto na máquina.
     command -v pkill >/dev/null 2>&1 || return 0
     local alvo
-    # os dois primeiros são os caminhos das versões anteriores a backend/
     for alvo in "$DIR/interface.py" "$DIR/app/interface.py" "$BACK/servidor.py" "criador_procedimento.server"; do
         if pgrep -f "$alvo" >/dev/null 2>&1; then
             pkill -f "$alvo" || true
@@ -64,6 +79,11 @@ parar_interface() {
 
 desinstalar() {
     parar_interface
+    if docker image inspect criador-procedimento:latest >/dev/null 2>&1; then
+        docker image rm criador-procedimento:latest >/dev/null 2>&1 \
+            && info "Imagem criador-procedimento:latest removida." \
+            || aviso "Não foi possível remover a imagem criador-procedimento:latest."
+    fi
     info "Removendo $DIR"
     rm -rf "$DIR"
     info "Removendo $BIN_DIR/$COMANDO"
@@ -78,11 +98,15 @@ desinstalar() {
     info "Desinstalação concluída. Se quiser, remova a linha '$MARCADOR_PATH' de $(arquivo_shell)."
 }
 
-verificar_python() {
-    command -v git >/dev/null 2>&1 || erro "git não encontrado. Instale-o (Linux: sudo apt-get install git | macOS: xcode-select --install)."
-    command -v python3 >/dev/null 2>&1 || erro "python3 não encontrado. Instale o Python 3.9 ou superior."
-    python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' \
-        || erro "Python 3.9 ou superior é necessário (encontrado: $(python3 --version 2>&1))."
+verificar_requisitos() {
+    command -v git >/dev/null 2>&1 \
+        || erro "git não encontrado. Instale-o (Linux: sudo apt-get install git | macOS: xcode-select --install)."
+    command -v docker >/dev/null 2>&1 \
+        || erro "docker não encontrado. Instale o Docker (macOS: https://docs.docker.com/desktop/install/mac-install/ | Linux: https://docs.docker.com/engine/install/)."
+    docker compose version >/dev/null 2>&1 \
+        || erro "'docker compose' não disponível. Atualize o Docker: o plugin Compose v2 é necessário."
+    docker info >/dev/null 2>&1 \
+        || erro "O Docker não está rodando. Abra o Docker Desktop (ou inicie o serviço no Linux) e rode de novo."
 }
 
 # Guarda a configuração do usuário antes do pull. app/config.yml e config.yml
@@ -197,46 +221,112 @@ baixar_codigo() {
     fi
 }
 
-# Instalação editável de propósito: o "criador-procedimento --atualizar" faz
-# git pull, e só no modo editável o código novo passa a valer sem reinstalar.
-instalar_dependencias() {
-    local venv="$DIR/.venv"
-    if [ -x "$venv/bin/python" ] || python3 -m venv "$venv" >/dev/null 2>&1; then
-        info "Instalando dependências no ambiente virtual ($venv)"
-        "$venv/bin/python" -m pip install --quiet --upgrade pip setuptools
-        "$venv/bin/python" -m pip install --quiet -e "$BACK"
-        PYTHON_EXEC="$venv/bin/python"
-        return
-    fi
+construir_imagem() {
+    # Os documentos são um bind mount: sem criar a pasta antes, o Docker a
+    # criaria como root e o container não conseguiria escrever nela.
+    mkdir -p "$BACK/procedimentos"
 
-    rm -rf "$venv"
-    aviso "Não foi possível criar o ambiente virtual (no Debian/Ubuntu: sudo apt-get install python3-venv). Tentando pip3/pip com --user."
-    local pip_cmd
-    if command -v pip3 >/dev/null 2>&1; then
-        pip_cmd="pip3"
-    elif command -v pip >/dev/null 2>&1; then
-        pip_cmd="pip"
-    else
-        erro "pip/pip3 não encontrado. Instale o python3-venv ou o pip (Linux: sudo apt-get install python3-venv python3-pip)."
+    info "Construindo a imagem (a primeira vez baixa o LibreOffice e demora alguns minutos)"
+    CRIADOR_UID="$(id -u)" CRIADOR_GID="$(id -g)" \
+        docker compose -f "$DIR/docker-compose.yml" build \
+        || erro "Falha ao construir a imagem. Veja a saída acima."
+
+    # O venv das versões que rodavam Python na máquina não serve mais para nada.
+    if [ -d "$DIR/.venv" ]; then
+        rm -rf "$DIR/.venv"
+        info "Ambiente virtual antigo removido: a aplicação agora roda em container."
     fi
-    info "Instalando dependências com $pip_cmd --user"
-    "$pip_cmd" install --quiet --user -e "$BACK" \
-        || erro "Falha ao instalar as dependências com $pip_cmd. Instale o python3-venv e rode o instalador novamente."
-    PYTHON_EXEC="$(command -v python3)"
 }
 
 criar_comando() {
     mkdir -p "$BIN_DIR"
     cat > "$BIN_DIR/$COMANDO" <<EOF
 #!/usr/bin/env bash
-# Gerado por instalar.sh - sobe a API e abre a interface do Criador de Procedimento de Coleta.
-# O --atualizar carrega as variaveis desta instalacao: sem elas, uma instalacao
-# em caminho customizado se atualizaria por cima da instalacao padrao.
-if [ "\${1:-}" = "--atualizar" ]; then
-    exec env CRIADOR_REPO="$REPO" CRIADOR_BRANCH="$BRANCH" CRIADOR_DIR="$DIR" CRIADOR_BIN="$BIN_DIR" \
-        bash "$DIR/instalar.sh"
-fi
-exec "$PYTHON_EXEC" -m criador_procedimento.server "\$@"
+# Gerado por instalar.sh - sobe a API e a interface do Criador de Procedimento
+# de Coleta, em container. O LibreOffice mora na imagem: e por isso que a
+# geracao em PDF funciona sem instalar nada na maquina.
+set -euo pipefail
+
+DIR="$DIR"
+PORTA="\${CRIADOR_PORTA_HOST:-8765}"
+ENDERECO="http://127.0.0.1:\$PORTA/"
+
+# O container escreve em backend/procedimentos pelo bind mount: rodar com o id
+# de quem chamou evita arquivo que o dono da pasta nao consegue apagar depois.
+export CRIADOR_UID="\$(id -u)" CRIADOR_GID="\$(id -g)"
+
+compose() { docker compose -f "\$DIR/docker-compose.yml" "\$@"; }
+
+abrir_navegador() {
+    [ -z "\${CRIADOR_SEM_NAVEGADOR:-}" ] || return 0
+    if command -v open >/dev/null 2>&1; then          # macOS
+        open "\$1" >/dev/null 2>&1 || true
+    elif command -v xdg-open >/dev/null 2>&1; then    # Linux
+        xdg-open "\$1" >/dev/null 2>&1 || true
+    fi
+}
+
+exigir_docker() {
+    command -v docker >/dev/null 2>&1 || {
+        printf '\033[1;31mErro:\033[0m %s\n' "docker nao encontrado. Instale o Docker e rode: $COMANDO --atualizar" >&2
+        exit 1
+    }
+    docker info >/dev/null 2>&1 || {
+        printf '\033[1;31mErro:\033[0m %s\n' "O Docker nao esta rodando. Abra o Docker Desktop e tente de novo." >&2
+        exit 1
+    }
+}
+
+case "\${1:-}" in
+    --atualizar)
+        # Carrega as variaveis desta instalacao: sem elas, uma instalacao em
+        # caminho customizado se atualizaria por cima da instalacao padrao.
+        exec env CRIADOR_REPO="$REPO" CRIADOR_BRANCH="$BRANCH" CRIADOR_DIR="$DIR" CRIADOR_BIN="$BIN_DIR" \
+            bash "$DIR/instalar.sh"
+        ;;
+    --parar)
+        exigir_docker
+        compose down
+        exit 0
+        ;;
+    --logs)
+        exigir_docker
+        exec docker compose -f "\$DIR/docker-compose.yml" logs -f
+        ;;
+    --gerar)
+        exigir_docker
+        shift
+        exec docker compose -f "\$DIR/docker-compose.yml" run --rm api criador-procedimento-gerar "\$@"
+        ;;
+    --ajuda|-h|--help)
+        printf '%s\n' \
+            "$COMANDO              sobe a API e abre a interface em \$ENDERECO" \
+            "$COMANDO --parar      encerra o container" \
+            "$COMANDO --logs       acompanha o log do container" \
+            "$COMANDO --gerar ...  gera pela linha de comando, dentro do container" \
+            "$COMANDO --atualizar  busca a versao nova e reconstroi a imagem"
+        exit 0
+        ;;
+esac
+
+exigir_docker
+mkdir -p "\$DIR/backend/procedimentos"
+compose up -d
+
+# A imagem sobe em segundos, mas o uvicorn leva um instante: so abre o
+# navegador quando a API responder, senao o usuario ve uma pagina de erro.
+for _ in \$(seq 1 60); do
+    if curl -fsS -m 2 "\${ENDERECO}api/saude" >/dev/null 2>&1; then
+        printf '\033[1;36m==>\033[0m %s\n' "API e interface em \$ENDERECO (documentacao em \${ENDERECO}docs)"
+        abrir_navegador "\$ENDERECO"
+        printf '\033[1;36m==>\033[0m %s\n' "Para encerrar: $COMANDO --parar"
+        exit 0
+    fi
+    sleep 1
+done
+
+printf '\033[1;31mErro:\033[0m %s\n' "O container subiu mas a API nao respondeu. Veja: $COMANDO --logs" >&2
+exit 1
 EOF
     chmod +x "$BIN_DIR/$COMANDO"
     info "Comando criado: $BIN_DIR/$COMANDO"
@@ -244,6 +334,11 @@ EOF
     case ":$PATH:" in
         *":$BIN_DIR:"*) COMANDO_NO_PATH=1; return ;;
     esac
+
+    if [ -n "$BIN_ESCOLHIDO" ]; then
+        aviso "$BIN_DIR não está no PATH. Chame por $BIN_DIR/$COMANDO ou acrescente a pasta ao PATH."
+        return
+    fi
 
     local pasta
     for pasta in $PASTAS_ATALHO; do
@@ -272,19 +367,15 @@ main() {
         return
     fi
 
-    verificar_python
+    verificar_requisitos
     parar_interface
     baixar_codigo
     local arquivo
-    for arquivo in backend/config.yml backend/pyproject.toml backend/src/criador_procedimento/main.py backend/src/criador_procedimento/server.py frontend/index.html; do
+    for arquivo in docker-compose.yml backend/Dockerfile backend/config.yml backend/pyproject.toml backend/src/criador_procedimento/main.py frontend/index.html; do
         [ -f "$DIR/$arquivo" ] || erro "$arquivo não encontrado no branch '$BRANCH' de $REPO. Verifique o branch (variável CRIADOR_BRANCH)."
     done
-    instalar_dependencias
+    construir_imagem
     criar_comando
-
-    command -v soffice >/dev/null 2>&1 || command -v libreoffice >/dev/null 2>&1 \
-        || [ -x /Applications/LibreOffice.app/Contents/MacOS/soffice ] \
-        || aviso "LibreOffice não encontrado: necessário apenas para gerar em PDF (Linux: sudo apt-get install libreoffice-writer | macOS: brew install --cask libreoffice)."
 
     # \042 e \047 sao aspa dupla e simples: o valor e comparado sem elas e sem espaco
     local api_key
@@ -303,6 +394,7 @@ main() {
         printf '\n'
     fi
     info "Para atualizar depois: $COMANDO --atualizar"
+    info "Outras opções: $COMANDO --ajuda"
 }
 
 main "$@"

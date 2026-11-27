@@ -14,7 +14,7 @@ A API existe para ser usada por fora da interface: qualquer integração faz um 
 
 ## Instalação
 
-Requisitos: Linux ou macOS, `git` e Python 3.9+.
+Requisitos: Linux ou macOS, `git` e **Docker** (com o plugin Compose v2). A aplicação roda em container — é o que faz a geração em PDF funcionar sem instalar mais nada.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/thiagorangelds/criador-procedimento-coleta/main/instalar.sh | bash
@@ -23,7 +23,7 @@ curl -fsSL https://raw.githubusercontent.com/thiagorangelds/criador-procedimento
 O instalador:
 
 - clona o repositório em `~/.local/share/criador-procedimento-coleta`;
-- instala o pacote e suas dependências num ambiente virtual próprio (`.venv`), em modo editável. Se o venv não estiver disponível, usa `pip3`/`pip` com `--user`;
+- constrói a imagem (a primeira vez baixa o LibreOffice e demora alguns minutos);
 - cria o comando `criador-procedimento`. Se `~/.local/bin` não estiver no PATH, cria um atalho numa pasta que já esteja (`~/bin`, `/opt/homebrew/bin` ou `/usr/local/bin`) ou adiciona `~/.local/bin` ao PATH no `.zshrc`/`.bashrc`. Nesse último caso, o comando só é reconhecido num terminal novo.
 
 Antes do primeiro uso, informe a API key do Gemini — ela é **do servidor**, não da interface:
@@ -39,29 +39,23 @@ Depois, para subir a API e abrir a interface:
 criador-procedimento
 ```
 
-Os documentos ficam em `~/.local/share/criador-procedimento-coleta/backend/procedimentos/` e também são baixados pela interface.
+Os documentos ficam em `~/.local/share/criador-procedimento-coleta/backend/procedimentos/`, na máquina, e também são baixados pela interface. O container escreve ali por um bind mount, com o seu próprio usuário — nada fica preso dentro dele.
 
-Instalação manual, sem o instalador, dentro de um clone do repositório:
+Instalação manual, sem o instalador, dentro de um clone do repositório: `docker compose up -d --build`.
+
+## O comando é o container
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e "./backend[dev]"
-criador-procedimento-api
+criador-procedimento              sobe a API e abre a interface
+criador-procedimento --parar      encerra o container
+criador-procedimento --logs       acompanha o log
+criador-procedimento --gerar ...  gera pela linha de comando, dentro do container
+criador-procedimento --atualizar  busca a versão nova e reconstrói a imagem
 ```
 
-A instalação é **editável** de propósito: o `criador-procedimento --atualizar` faz `git pull`, e só assim o código novo passa a valer sem reinstalar.
+Houve uma época em que dava para rodar de dois jeitos — Python direto na máquina ou container. **O jeito da máquina não gerava PDF**, porque o LibreOffice não estava lá, e a opção simplesmente aparecia desabilitada sem explicação óbvia. Agora existe um caminho só, e ele traz o LibreOffice dentro.
 
-## O container não substitui o comando local
-
-São dois jeitos independentes de rodar, e **o `criador-procedimento` não usa o container**: ele sobe Python direto na sua máquina e enxerga o LibreOffice da sua máquina. Quem traz o LibreOffice embutido é a imagem — e só vale se você subir a imagem.
-
-| | `criador-procedimento` | `docker compose up -d` |
-|---|---|---|
-| Onde roda | Python na sua máquina | container |
-| PDF | só se a máquina tiver LibreOffice | sempre |
-| Configuração | `backend/config.yml` | variáveis `CRIADOR_*` |
-
-Para gerar PDF sem instalar o LibreOffice na sua máquina, use o container. O contrário também vale: `brew install --cask libreoffice` e o comando local passa a gerar PDF.
+O que fica **na sua máquina**, fora do container: o `backend/config.yml` (montado como somente leitura, para a API key não entrar na imagem) e a pasta `backend/procedimentos`.
 
 ## Atualização
 
@@ -75,9 +69,11 @@ criador-procedimento --atualizar
 curl -fsSL https://raw.githubusercontent.com/thiagorangelds/criador-procedimento-coleta/main/instalar.sh | bash
 ```
 
-As duas encerram o servidor se ele estiver no ar, atualizam o código e as dependências e preservam o seu `config.yml`, incluindo a API key.
+As duas encerram o container se ele estiver no ar, atualizam o código, **reconstroem a imagem** e preservam o seu `config.yml` e os documentos já gerados.
 
 Se a atualização mudar o próprio `instalar.sh`, ele reexecuta a versão nova e segue por ela. Sem isso, o fluxo que já está na memória do bash continuaria validando o layout antigo contra a árvore nova e abortaria no meio — com o código já atualizado e o comando apontando para arquivos que acabaram de sair do lugar.
+
+**Vindo de uma versão que rodava Python na máquina:** o `.venv` da instalação é removido, porque não é mais usado. A configuração e os documentos continuam onde estão, e passam a ser montados dentro do container.
 
 **Vindo de uma versão anterior à divisão front/back:** a configuração e os documentos já gerados são movidos de `app/` para `backend/` automaticamente, e a pasta `app/` é removida quando não sobra nada seu nela. Vindo de uma versão anterior ainda à pasta `app/`, prefira o `curl`, que resolve numa execução só: pelo `criador-procedimento --atualizar`, a primeira execução termina com erro, porque ainda usa o instalador antigo, e a segunda conclui.
 
@@ -94,7 +90,7 @@ Remove a instalação, o comando e o atalho, se houver. A configuração e os do
 ```
 criador-procedimento-coleta/
 ├── instalar.sh                 instalador e atualizador (Linux/macOS)
-├── docker-compose.yml          sobe a API em container, com volume
+├── docker-compose.yml          é como o comando sobe a aplicação
 ├── frontend/index.html         interface web, sem build
 └── backend/
     ├── pyproject.toml          dependências, versão e os comandos do pacote
@@ -169,7 +165,7 @@ criador-procedimento
 
 Abre `http://127.0.0.1:8765/`. A página tem as tecnologias, o formato do documento, o andamento em tempo real e os documentos gerados, agrupados por pasta.
 
-Opções: `--porta <n>`, `--host <endereço>` e `--sem-navegador`.
+Para usar outra porta no host: `CRIADOR_PORTA_HOST=9000 criador-procedimento`.
 
 A lista de tecnologias é guardada **no navegador**, não no servidor. Quando o servidor exige token, a interface pede o token uma vez e o guarda no mesmo navegador.
 
@@ -223,12 +219,12 @@ Com `API_TOKEN` definido, mande `Authorization: Bearer <token>` ou `X-API-Token:
 
 ### Linha de comando
 
-Sem subir a API:
+Sem subir a API, num container descartável:
 
 ```bash
-criador-procedimento-gerar "Fortinet Fortigate via syslog"
-criador-procedimento-gerar --formato pdf "Imperva WAF"
-criador-procedimento-gerar                 # usa TECNOLOGIAS do config.yml
+criador-procedimento --gerar "Fortinet Fortigate via syslog"
+criador-procedimento --gerar --formato pdf "Imperva WAF"
+criador-procedimento --gerar                 # usa TECNOLOGIAS do config.yml
 ```
 
 ## Deploy em container
@@ -273,30 +269,16 @@ O modelo Word pede Roboto, Arial, Calibri, Georgia e Consolas. Sem elas o LibreO
 
 Consolas, a fonte do bloco de código, não é redistribuível. Sem tratamento o LibreOffice a lê como proporcional e troca por uma fonte de texto corrido — o bloco de código perde o alinhamento. A imagem resolve com um alias de fontconfig para DejaVu Sans Mono. Declarar a fonte no `fontTable.xml` do DOCX **não** funciona: o LibreOffice deduz os atributos da fonte instalada e ignora o que o documento declara.
 
-### Sem container
-
-```bash
-uvicorn criador_procedimento.main:app --host 0.0.0.0 --port 8765
-```
-
-Exemplo de unidade systemd:
-
-```ini
-[Service]
-EnvironmentFile=/opt/criador-procedimento-coleta/backend/.env
-ExecStart=/opt/criador-procedimento-coleta/.venv/bin/uvicorn criador_procedimento.main:app --host 0.0.0.0 --port 8765
-Restart=always
-```
-
-### Pontos de atenção, nos dois casos
+### Pontos de atenção
 
 - **Defina `API_TOKEN`.** Sem ele, qualquer um que alcance a máquina gera documentos com a sua cota do Gemini e baixa tudo o que já foi gerado. O `server.py` avisa na subida quando escuta fora do loopback sem token; o uvicorn direto não avisa.
+- Num servidor, o `docker-compose.yml` monta `backend/config.yml` e `backend/procedimentos` do próprio clone. `CRIADOR_UID`/`CRIADOR_GID` definem com que usuário o container escreve — o instalador preenche com o de quem instalou; num serviço, aponte para o dono da pasta.
 - **Um worker só.** A fila de jobs e o histórico vivem na memória do processo: com `--workers 2`, cada um teria a sua fila e o `GET` do job cairia metade das vezes no processo que não o conhece. Para escalar de verdade, trocar `modules/jobs/repository.py` por algo compartilhado vem primeiro.
 - Reiniciar o processo perde o histórico de jobs. Os arquivos já gravados ficam.
 
 ## Testes
 
-Precisam do pacote instalado com os extras de desenvolvimento. Num clone, uma vez:
+Os testes rodam em Python na máquina, **não** no container: é o único lugar onde ainda se usa um venv, e só para desenvolver. Num clone, uma vez:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate && pip install -e "./backend[dev]"
@@ -317,20 +299,14 @@ cd backend && pytest
 | `command not found: criador-procedimento` | Abra um novo terminal, porque o PATH só é recarregado numa nova sessão, ou rode direto `~/.local/bin/criador-procedimento`. |
 | Aviso na interface de que falta a API key | Preencha `API_KEY` no `backend/config.yml` (o caminho exato aparece no aviso) ou defina `CRIADOR_API_KEY`, e reinicie. |
 | `401` nas chamadas da API | O servidor tem `API_TOKEN`. Mande `Authorization: Bearer <token>`; na interface, o cadeado na barra de cima guarda o token. |
-| Uma versão anterior do servidor ficou aberta | `pkill -f criador_procedimento.server` e depois `criador-procedimento`. Em versões anteriores à divisão front/back: `pkill -f interface.py`. |
-| `A porta 8765 está em uso por outro programa` | Use outra porta: `criador-procedimento --porta 8766`. |
-| `LibreOffice não encontrado` | Necessário só para gerar em PDF. Instale-o (veja [Geração em PDF](#geração-em-pdf-opcional)) ou use o formato DOCX. |
+| `O Docker não está rodando` | Abra o Docker Desktop (macOS) ou inicie o serviço (Linux) e rode de novo. |
+| `O container subiu mas a API não respondeu` | `criador-procedimento --logs` mostra o que aconteceu lá dentro. |
+| Porta 8765 ocupada | `CRIADOR_PORTA_HOST=9000 criador-procedimento`. |
+| Algo ficou rodando de uma versão antiga, em Python | `pkill -f criador_procedimento.server`. O instalador já faz isso sozinho. |
 
-## Geração em PDF (opcional)
+## Geração em PDF
 
-Somente quando o formato pedido é `pdf`. **No container já vem pronto** (veja [Deploy em container](#deploy-em-container)); fora dele, o PDF é gerado pelo LibreOffice (headless), que precisa estar instalado **na máquina do servidor**:
-
-```bash
-sudo apt-get install -y libreoffice-writer   # Linux (Debian/Ubuntu)
-brew install --cask libreoffice              # macOS
-```
-
-O executável é procurado no PATH (`soffice`/`libreoffice`) e no caminho padrão do macOS (`/Applications/LibreOffice.app`). Sem ele, a opção PDF aparece desabilitada na interface e um job com `formato_saida: "pdf"` é recusado com `400`.
+Funciona sem instalar nada: o LibreOffice (headless) vem na imagem, junto com as fontes do modelo Word. Para uma imagem bem menor, sem PDF, veja [Deploy em container](#deploy-em-container).
 
 ## O que é gerado
 
