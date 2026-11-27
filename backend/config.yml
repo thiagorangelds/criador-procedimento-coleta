@@ -11,11 +11,27 @@ API_KEY: ""
 RETRY: 5
 
 # Modelos do Gemini, em ordem de preferência (fallback). O primeiro é usado
-# sempre; se ele atingir o limite ou sumir da API, o próximo assume. Modelo
-# aposentado pelo Google responde 404 e queima a vez dele no fallback.
+# sempre; se ele atingir o limite ou ficar indisponível, o próximo assume.
+#
+# A ordem aqui é por QUALIDADE DO DOCUMENTO, não por data do modelo. Medido em
+# 2026-11-26 com uma key do free tier, na mesma tecnologia:
+#
+#   gemini-2.5-flash   levantamento 18 KB   catálogo ECS 9,4 KB
+#   gemini-3.6-flash   levantamento 6,8 KB  catálogo ECS 2,0 KB
+#
+# O mais novo é mais rápido e responde bem, mas entrega cerca de um terço do
+# conteúdo — e o catálogo é o que alimenta o parsing. Por isso ele fica como
+# fallback: documento mais enxuto é melhor que documento nenhum.
+#
+# Sobre o resto da listagem da API, na mesma medição: os "flash" 3.7 e 3.8
+# devolvem 503 na maioria das chamadas, e cada 503 custa o backoff inteiro
+# antes de cair para o próximo da lista; os "omni" recusam direto com 429; e
+# modelo aposentado pelo Google (gemini-2.0-flash, gemini-2.5-flash-lite)
+# responde 404 e também queima a vez dele. Confira com models.list() antes de
+# culpar a key.
 MODELOS:
   - "gemini-2.5-flash"
-  - "gemini-2.5-flash-lite"
+  - "gemini-3.6-flash"
 
 # Tecnologias padrão da geração por linha de comando (python gerar.py, sem
 # argumento). A interface e a API mandam a lista em cada pedido e ignoram esta.

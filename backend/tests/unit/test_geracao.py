@@ -103,7 +103,21 @@ def test_cliente_fixa_a_versao_v1beta(monkeypatch):
     assert capturado["http_options"] == {"api_version": "v1beta"}
 
 
+# Aposentados pelo Google: respondem 404 e queimam a vez deles no fallback.
+MODELOS_APOSENTADOS = ("gemini-2.0-flash", "gemini-2.5-flash-lite")
+
+
 def test_modelo_padrao_nao_traz_modelo_aposentado():
     from criador_procedimento.core import config
 
-    assert "gemini-2.0-flash" not in config.MODELOS_PADRAO
+    assert not set(config.MODELOS_PADRAO) & set(MODELOS_APOSENTADOS)
+
+
+def test_config_versionado_nao_traz_modelo_aposentado():
+    """O config.yml do repositório é o que uma instalação nova herda."""
+    from criador_procedimento.core import config
+    from criador_procedimento.shared import paths
+
+    modelos = config.ler_arquivo(paths.PASTA_BACKEND / "config.yml").get("MODELOS") or []
+    assert not set(modelos) & set(MODELOS_APOSENTADOS)
+    assert modelos, "o config.yml versionado precisa trazer uma lista de modelos"

@@ -34,7 +34,7 @@ SEPARADOR_COLETA = " via "
 
 HOST_PADRAO = "127.0.0.1"
 PORTA_PADRAO = 8765
-MODELOS_PADRAO = ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
+MODELOS_PADRAO = ["gemini-2.5-flash", "gemini-3.6-flash"]
 RETRY_PADRAO = 5
 
 # Variável de ambiente que sobrepõe a chave do arquivo.
