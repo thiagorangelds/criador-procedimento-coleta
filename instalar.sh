@@ -16,6 +16,14 @@ set -euo pipefail
 # Guardados porque baixar_codigo pode precisar reexecutar este script.
 ARGS=("$@")
 
+# Shell aberto numa pasta que depois foi apagada: o pip estoura com
+# FileNotFoundError em os.getcwd() e a atualização morre no meio. Só saímos de
+# lá quando o diretório atual realmente sumiu, para não atrapalhar quem passa
+# CRIADOR_REPO ou CRIADOR_DIR como caminho relativo.
+if ! pwd -P >/dev/null 2>&1; then
+    cd "$HOME" 2>/dev/null || cd /
+fi
+
 REPO="${CRIADOR_REPO:-https://github.com/thiagorangelds/criador-procedimento-coleta.git}"
 BRANCH="${CRIADOR_BRANCH:-main}"
 DIR="${CRIADOR_DIR:-$HOME/.local/share/criador-procedimento-coleta}"
