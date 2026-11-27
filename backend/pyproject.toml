@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "criador-procedimento-coleta"
+description = "Gera, via Gemini, a documentação de coleta de logs de uma tecnologia."
+requires-python = ">=3.9"
+dynamic = ["version"]
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.27",
+    "google-genai>=1.0.0",
+    "PyYAML>=6.0",
+    "python-dotenv>=1.0",
+]
+
+# Para FORMATO_SAIDA "pdf" é necessário o LibreOffice instalado: é dependência
+# de sistema, não instalável por aqui.
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+criador-procedimento-api = "criador_procedimento.server:main"
+criador-procedimento-gerar = "criador_procedimento.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "criador_procedimento.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::FutureWarning"]

@@ -16,13 +16,15 @@ set -euo pipefail
 REPO="${CRIADOR_REPO:-https://github.com/thiagorangelds/criador-procedimento-coleta.git}"
 BRANCH="${CRIADOR_BRANCH:-main}"
 DIR="${CRIADOR_DIR:-$HOME/.local/share/criador-procedimento-coleta}"
-APP="$DIR/app"
+BACK="$DIR/backend"
 BIN_DIR="${CRIADOR_BIN:-$HOME/.local/bin}"
 COMANDO="criador-procedimento"
 MARCADOR_PATH="# criador-procedimento-coleta"
 PASTAS_ATALHO="$HOME/bin /opt/homebrew/bin /usr/local/bin"
 COMANDO_NO_PATH=""
 RC_ALTERADO=""
+CONFIG_BACKUP=""
+CONFIG_ORIGEM=""
 
 info() { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
 aviso() { printf '\033[1;33mAviso:\033[0m %s\n' "$*" >&2; }
@@ -39,11 +41,11 @@ arquivo_shell() {
 parar_interface() {
     command -v pkill >/dev/null 2>&1 || return 0
     local alvo
-    # $DIR/interface.py é o caminho das versões anteriores a app/
-    for alvo in "$DIR/interface.py" "$APP/interface.py"; do
+    # os dois primeiros são os caminhos das versões anteriores a backend/
+    for alvo in "$DIR/interface.py" "$DIR/app/interface.py" "$BACK/servidor.py" "criador_procedimento.server"; do
         if pgrep -f "$alvo" >/dev/null 2>&1; then
             pkill -f "$alvo" || true
-            info "Interface em execução encerrada ($alvo)."
+            info "Servidor em execução encerrado ($alvo)."
         fi
     done
 }
@@ -71,30 +73,63 @@ verificar_python() {
         || erro "Python 3.9 ou superior é necessário (encontrado: $(python3 --version 2>&1))."
 }
 
+# Guarda a configuração do usuário antes do pull. app/config.yml e config.yml
+# na raiz são os locais das versões anteriores a backend/.
+preservar_config() {
+    local candidato
+    for candidato in backend/config.yml app/config.yml config.yml; do
+        [ -f "$DIR/$candidato" ] || continue
+        if git -C "$DIR" ls-files --error-unmatch "$candidato" >/dev/null 2>&1 \
+            && git -C "$DIR" diff --quiet -- "$candidato" 2>/dev/null; then
+            continue  # igual ao do repositório: nada de seu para preservar
+        fi
+        CONFIG_BACKUP="$(mktemp)"
+        CONFIG_ORIGEM="$candidato"
+        cp "$DIR/$candidato" "$CONFIG_BACKUP"
+        git -C "$DIR" checkout -- "$candidato" 2>/dev/null || true
+        return
+    done
+}
+
+restaurar_config() {
+    [ -n "$CONFIG_BACKUP" ] || return 0
+    cp "$CONFIG_BACKUP" "$BACK/config.yml"
+    rm -f "$CONFIG_BACKUP"
+    if [ "$CONFIG_ORIGEM" = "backend/config.yml" ]; then
+        info "Sua configuração (config.yml) foi preservada."
+    else
+        info "Sua configuração foi movida de $CONFIG_ORIGEM para backend/config.yml."
+    fi
+}
+
+# Leva o que o usuário gerou (e o log) para backend/, e limpa a pasta app/ do
+# layout antigo depois que nada mais de seu está lá.
+migrar_layout_antigo() {
+    local antigo
+    for antigo in "$DIR/app/procedimentos" "$DIR/procedimentos"; do
+        if [ -d "$antigo" ] && [ ! -d "$BACK/procedimentos" ]; then
+            mv "$antigo" "$BACK/procedimentos"
+            info "Documentos já gerados movidos para backend/procedimentos."
+        fi
+    done
+    [ -d "$DIR/app" ] || return 0
+    find "$DIR/app" -type d -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
+    rm -f "$DIR/app/config.yml" "$DIR/app"/execucao.log*
+    # -delete e bottom-up: tira as subpastas vazias e, por fim, a propria app/
+    find "$DIR/app" -type d -empty -delete 2>/dev/null || true
+    [ ! -d "$DIR/app" ] \
+        || aviso "A pasta antiga $DIR/app ainda tem arquivos. Confira e remova quando quiser."
+}
+
 baixar_codigo() {
     if [ -d "$DIR/.git" ]; then
         info "Atualizando o código em $DIR"
-        local backup="" config_usuario
-        # config.yml na raiz é o local das versões anteriores a app/
-        for config_usuario in app/config.yml config.yml; do
-            if [ -f "$DIR/$config_usuario" ] && ! git -C "$DIR" diff --quiet -- "$config_usuario" 2>/dev/null; then
-                backup="$(mktemp)"
-                cp "$DIR/$config_usuario" "$backup"
-                git -C "$DIR" checkout -- "$config_usuario"
-                break
-            fi
-        done
+        preservar_config
         git -C "$DIR" fetch --quiet origin "$BRANCH"
         git -C "$DIR" checkout --quiet "$BRANCH"
         git -C "$DIR" pull --quiet --ff-only origin "$BRANCH"
-        if [ -n "$backup" ]; then
-            cp "$backup" "$APP/config.yml"
-            rm -f "$backup"
-            info "Sua configuração (config.yml) foi preservada."
-        elif [ -f "$DIR/config.yml" ] && ! git -C "$DIR" ls-files --error-unmatch config.yml >/dev/null 2>&1; then
-            mv "$DIR/config.yml" "$APP/config.yml"
-            info "Sua configuração foi movida para app/config.yml."
-        fi
+        restaurar_config
+        migrar_layout_antigo
     else
         info "Clonando $REPO ($BRANCH) em $DIR"
         mkdir -p "$(dirname "$DIR")"
@@ -102,12 +137,14 @@ baixar_codigo() {
     fi
 }
 
+# Instalação editável de propósito: o "criador-procedimento --atualizar" faz
+# git pull, e só no modo editável o código novo passa a valer sem reinstalar.
 instalar_dependencias() {
     local venv="$DIR/.venv"
     if [ -x "$venv/bin/python" ] || python3 -m venv "$venv" >/dev/null 2>&1; then
         info "Instalando dependências no ambiente virtual ($venv)"
-        "$venv/bin/python" -m pip install --quiet --upgrade pip
-        "$venv/bin/python" -m pip install --quiet -r "$APP/requirements.txt"
+        "$venv/bin/python" -m pip install --quiet --upgrade pip setuptools
+        "$venv/bin/python" -m pip install --quiet -e "$BACK"
         PYTHON_EXEC="$venv/bin/python"
         return
     fi
@@ -123,7 +160,7 @@ instalar_dependencias() {
         erro "pip/pip3 não encontrado. Instale o python3-venv ou o pip (Linux: sudo apt-get install python3-venv python3-pip)."
     fi
     info "Instalando dependências com $pip_cmd --user"
-    "$pip_cmd" install --quiet --user -r "$APP/requirements.txt" \
+    "$pip_cmd" install --quiet --user -e "$BACK" \
         || erro "Falha ao instalar as dependências com $pip_cmd. Instale o python3-venv e rode o instalador novamente."
     PYTHON_EXEC="$(command -v python3)"
 }
@@ -132,11 +169,11 @@ criar_comando() {
     mkdir -p "$BIN_DIR"
     cat > "$BIN_DIR/$COMANDO" <<EOF
 #!/usr/bin/env bash
-# Gerado por instalar.sh - abre a interface do Criador de Procedimento de Coleta.
+# Gerado por instalar.sh - sobe a API e abre a interface do Criador de Procedimento de Coleta.
 if [ "\${1:-}" = "--atualizar" ]; then
     exec bash "$DIR/instalar.sh"
 fi
-exec "$PYTHON_EXEC" "$APP/interface.py" "\$@"
+exec "$PYTHON_EXEC" -m criador_procedimento.server "\$@"
 EOF
     chmod +x "$BIN_DIR/$COMANDO"
     info "Comando criado: $BIN_DIR/$COMANDO"
@@ -176,8 +213,8 @@ main() {
     parar_interface
     baixar_codigo
     local arquivo
-    for arquivo in config.yml requirements.txt script.py interface.py interface.html; do
-        [ -f "$APP/$arquivo" ] || erro "app/$arquivo não encontrado no branch '$BRANCH' de $REPO. Verifique o branch (variável CRIADOR_BRANCH)."
+    for arquivo in backend/config.yml backend/pyproject.toml backend/src/criador_procedimento/main.py backend/src/criador_procedimento/server.py frontend/index.html; do
+        [ -f "$DIR/$arquivo" ] || erro "$arquivo não encontrado no branch '$BRANCH' de $REPO. Verifique o branch (variável CRIADOR_BRANCH)."
     done
     instalar_dependencias
     criar_comando
@@ -185,6 +222,13 @@ main() {
     command -v soffice >/dev/null 2>&1 || command -v libreoffice >/dev/null 2>&1 \
         || [ -x /Applications/LibreOffice.app/Contents/MacOS/soffice ] \
         || aviso "LibreOffice não encontrado: necessário apenas para gerar em PDF (Linux: sudo apt-get install libreoffice-writer | macOS: brew install --cask libreoffice)."
+
+    # \042 e \047 sao aspa dupla e simples: o valor e comparado sem elas e sem espaco
+    local api_key
+    api_key="$(sed -n 's/^API_KEY:[[:space:]]*//p' "$BACK/config.yml" 2>/dev/null | head -1 | tr -d '\042\047[:space:]')"
+    if [ -z "$api_key" ] && [ -z "${CRIADOR_API_KEY:-}" ]; then
+        aviso "Falta a API key do Gemini: preencha API_KEY em $BACK/config.yml (ou defina CRIADOR_API_KEY) antes de gerar."
+    fi
 
     info "Instalação concluída."
     if [ -n "$COMANDO_NO_PATH" ]; then

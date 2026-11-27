@@ -1,0 +1,54 @@
+# Configuração do servidor. A interface e a API não escrevem aqui: mudança
+# neste arquivo vale no próximo início.
+#
+# Toda chave abaixo pode vir do ambiente, e aí o ambiente vence:
+#   CRIADOR_API_KEY  CRIADOR_API_TOKEN  CRIADOR_HOST  CRIADOR_PORTA  CRIADOR_CORS_ORIGENS
+
+# Chave da API do Gemini, usada por todas as gerações deste servidor.
+API_KEY: ""
+
+# Tentativas por modelo em caso de limite de taxa ou indisponibilidade da API.
+RETRY: 5
+
+# Modelos do Gemini, em ordem de preferência (fallback). O primeiro é usado
+# sempre; se ele atingir o limite ou sumir da API, o próximo assume. Modelo
+# aposentado pelo Google responde 404 e queima a vez dele no fallback.
+MODELOS:
+  - "gemini-2.5-flash"
+  - "gemini-2.5-flash-lite"
+
+# Tecnologias padrão da geração por linha de comando (python gerar.py, sem
+# argumento). A interface e a API mandam a lista em cada pedido e ignoram esta.
+TECNOLOGIAS:
+  []
+
+# Formato padrão do Procedimento de Coleta: "docx" ou "pdf". O job pode pedir
+# outro. Para "pdf" é necessário ter o LibreOffice instalado no servidor.
+FORMATO_SAIDA: docx
+
+# (Opcional, só para "pdf") Caminho do executável do LibreOffice, caso não esteja no PATH.
+# LIBREOFFICE: /opt/libreoffice/program/soffice
+
+# (Opcional) Modelo Word usado no documento de Procedimento de Coleta.
+# MODELO_DOCX: templates/modelo_procedimento_coleta.docx
+
+# ---------------------------------------------------------------------------
+# Servidor
+# ---------------------------------------------------------------------------
+
+# Endereço de escuta. "127.0.0.1" só aceita conexões da própria máquina;
+# use "0.0.0.0" para expor na rede — e nesse caso defina API_TOKEN.
+HOST: "127.0.0.1"
+
+# Porta da API e da interface.
+PORTA: 8765
+
+# (Opcional) Token exigido em todas as rotas /api, no cabeçalho
+# "Authorization: Bearer <token>" ou "X-API-Token: <token>". Vazio = sem
+# autenticação, aceitável apenas com HOST em 127.0.0.1.
+# API_TOKEN: "troque-por-um-token-longo-e-aleatorio"
+
+# (Opcional) Origens liberadas no CORS, para um front servido em outro endereço.
+# Vazio = só o front que esta própria API serve.
+CORS_ORIGENS:
+  []
