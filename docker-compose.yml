@@ -1,10 +1,10 @@
-# Sobe a API com os documentos num volume nomeado:
+# Sobe a API e a interface em container. É o que o comando criador-procedimento
+# usa, e é por isso que a geração em PDF funciona sem instalar nada na máquina:
+# o LibreOffice mora dentro da imagem.
 #
-#   cp backend/.env.example backend/.env   # preencha CRIADOR_API_KEY e CRIADOR_API_TOKEN
 #   docker compose up -d --build
 #
-# A imagem já traz o LibreOffice, então gera DOCX e PDF. Para uma imagem bem
-# menor, só com DOCX: COM_LIBREOFFICE=false docker compose up -d --build
+# Para uma imagem bem menor, sem PDF: COM_LIBREOFFICE=false docker compose up -d --build
 
 services:
   api:
@@ -14,18 +14,30 @@ services:
       args:
         COM_LIBREOFFICE: "${COM_LIBREOFFICE:-true}"
     image: criador-procedimento:latest
+
     env_file:
       - path: backend/.env
         required: false
+
     environment:
       CRIADOR_HOST: "0.0.0.0"
       CRIADOR_PORTA: "8765"
       CRIADOR_PASTA_SAIDA: "/dados"
+
+    # Roda como o dono dos arquivos do host, senão o container escreveria em
+    # procedimentos/ como uid 10001 e o usuário não conseguiria mexer depois.
+    # O instalador preenche os dois com o id de quem instalou.
+    user: "${CRIADOR_UID:-10001}:${CRIADOR_GID:-10001}"
+
     ports:
       - "${CRIADOR_PORTA_HOST:-8765}:8765"
-    volumes:
-      - procedimentos:/dados
-    restart: unless-stopped
 
-volumes:
-  procedimentos:
+    volumes:
+      # A configuração fica no host: a imagem não carrega config.yml, para a
+      # API key nunca entrar numa camada dela.
+      - ./backend/config.yml:/app/backend/config.yml:ro
+      # Os documentos também, no mesmo lugar de sempre — assim o que já foi
+      # gerado continua aparecendo, e não some junto com o container.
+      - ./backend/procedimentos:/dados
+
+    restart: unless-stopped
