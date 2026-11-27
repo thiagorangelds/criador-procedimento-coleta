@@ -13,9 +13,13 @@
 
 set -euo pipefail
 
+# Guardados porque baixar_codigo pode precisar reexecutar este script.
+ARGS=("$@")
+
 REPO="${CRIADOR_REPO:-https://github.com/thiagorangelds/criador-procedimento-coleta.git}"
 BRANCH="${CRIADOR_BRANCH:-main}"
 DIR="${CRIADOR_DIR:-$HOME/.local/share/criador-procedimento-coleta}"
+INSTALADOR="$DIR/instalar.sh"
 BACK="$DIR/backend"
 BIN_DIR="${CRIADOR_BIN:-$HOME/.local/bin}"
 COMANDO="criador-procedimento"
@@ -93,12 +97,18 @@ preservar_config() {
 
 restaurar_config() {
     [ -n "$CONFIG_BACKUP" ] || return 0
+    mkdir -p "$BACK"
     cp "$CONFIG_BACKUP" "$BACK/config.yml"
     rm -f "$CONFIG_BACKUP"
     if [ "$CONFIG_ORIGEM" = "backend/config.yml" ]; then
         info "Sua configuração (config.yml) foi preservada."
-    else
-        info "Sua configuração foi movida de $CONFIG_ORIGEM para backend/config.yml."
+        return 0
+    fi
+    info "Sua configuração foi movida de $CONFIG_ORIGEM para backend/config.yml."
+    # O arquivo no lugar antigo não é mais lido por ninguém e carrega uma cópia
+    # da API key. Só sai depois que a cópia nova já está em disco.
+    if [ -f "$DIR/$CONFIG_ORIGEM" ] && [ -f "$BACK/config.yml" ]; then
+        rm -f "$DIR/$CONFIG_ORIGEM"
     fi
 }
 
@@ -121,14 +131,56 @@ migrar_layout_antigo() {
         || aviso "A pasta antiga $DIR/app ainda tem arquivos. Confira e remova quando quiser."
 }
 
+# Impressão do instalador em disco, para saber se o pull trocou o próprio
+# script. shasum existe no macOS, sha1sum no Linux; sem nenhum dos dois, o
+# tamanho já denuncia a troca.
+impressao_do_instalador() {
+    [ -f "$INSTALADOR" ] || return 0
+    if command -v shasum >/dev/null 2>&1; then
+        shasum "$INSTALADOR" | cut -d" " -f1
+    elif command -v sha1sum >/dev/null 2>&1; then
+        sha1sum "$INSTALADOR" | cut -d" " -f1
+    else
+        wc -c < "$INSTALADOR" | tr -d " "
+    fi
+}
+
+# O bash lê o script conforme executa, mas o fluxo que já está em memória é o
+# da versão ANTIGA: depois de um pull que mude a estrutura do projeto, ele
+# continuaria validando o layout velho contra a árvore nova e abortaria. Por
+# isso, se o instalador mudou, passamos a bola para a versão nova.
+#
+# Vem depois de restaurar_config de propósito: até ali a configuração do
+# usuário só existe num arquivo temporário que a versão nova não conheceria.
+reexecutar_instalador_novo() {
+    local antes="$1" depois
+    depois="$(impressao_do_instalador)"
+    [ -n "$antes" ] && [ -n "$depois" ] && [ "$antes" != "$depois" ] || return 0
+
+    if [ -n "${CRIADOR_INSTALADOR_REEXECUTADO:-}" ]; then
+        aviso "O instalador mudou de novo após reexecutar. Seguindo com o que está em memória."
+        return 0
+    fi
+
+    info "O instalador mudou nesta atualização. Reexecutando a versão nova."
+    exec env \
+        CRIADOR_INSTALADOR_REEXECUTADO=1 \
+        CRIADOR_REPO="$REPO" CRIADOR_BRANCH="$BRANCH" \
+        CRIADOR_DIR="$DIR" CRIADOR_BIN="$BIN_DIR" \
+        bash "$INSTALADOR" ${ARGS[@]+"${ARGS[@]}"}
+}
+
 baixar_codigo() {
     if [ -d "$DIR/.git" ]; then
         info "Atualizando o código em $DIR"
+        local instalador_antes
+        instalador_antes="$(impressao_do_instalador)"
         preservar_config
         git -C "$DIR" fetch --quiet origin "$BRANCH"
         git -C "$DIR" checkout --quiet "$BRANCH"
         git -C "$DIR" pull --quiet --ff-only origin "$BRANCH"
         restaurar_config
+        reexecutar_instalador_novo "$instalador_antes"
         migrar_layout_antigo
     else
         info "Clonando $REPO ($BRANCH) em $DIR"
@@ -170,8 +222,11 @@ criar_comando() {
     cat > "$BIN_DIR/$COMANDO" <<EOF
 #!/usr/bin/env bash
 # Gerado por instalar.sh - sobe a API e abre a interface do Criador de Procedimento de Coleta.
+# O --atualizar carrega as variaveis desta instalacao: sem elas, uma instalacao
+# em caminho customizado se atualizaria por cima da instalacao padrao.
 if [ "\${1:-}" = "--atualizar" ]; then
-    exec bash "$DIR/instalar.sh"
+    exec env CRIADOR_REPO="$REPO" CRIADOR_BRANCH="$BRANCH" CRIADOR_DIR="$DIR" CRIADOR_BIN="$BIN_DIR" \
+        bash "$DIR/instalar.sh"
 fi
 exec "$PYTHON_EXEC" -m criador_procedimento.server "\$@"
 EOF
