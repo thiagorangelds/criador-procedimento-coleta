@@ -1,0 +1,21 @@
+.git
+.github
+.claude
+.venv
+**/.venv
+**/__pycache__
+**/*.py[cod]
+**/*.egg-info
+**/.pytest_cache
+
+# segredo e dados nunca entram na imagem: vêm por env_file e volume
+backend/.env
+backend/procedimentos
+backend/execucao.log*
+
+# material de origem interno, solto na raiz
+/DOCUMENTO DE BASE *.docx
+/DOCUMENTO DE BASE *.pdf
+
+.DS_Store
+**/.DS_Store

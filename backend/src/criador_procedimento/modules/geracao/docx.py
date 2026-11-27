@@ -1,3 +1,18 @@
+"""Monta o `.docx` por cirurgia de XML cru sobre o modelo Word.
+
+Não usa `python-docx`: abre o zip do modelo, edita `word/document.xml` como
+string e grava o zip de volta. Três consequências para quem mexer aqui:
+
+- os placeholders são procurados **já escapados** (`&lt;TECNOLOGIA&gt;`);
+- marcador de lista exige um `abstractNum`/`num` com `numId=900` injetado em
+  `word/numbering.xml`, e o `abstractNum` **tem que vir antes** de qualquer
+  `w:num` existente;
+- trocar o modelo Word quebra tudo se os placeholders `dd.mm.aaaa`,
+  `<TECNOLOGIA>`, `<Introdução sobre a tecnologia e o tipo de coleta>` e
+  `<Passo a passo do procedimento>` não forem preservados, cada um no seu
+  próprio parágrafo.
+"""
+
 import os
 import re
 import shutil
@@ -7,6 +22,8 @@ import zipfile
 from datetime import date
 from pathlib import Path
 from xml.sax.saxutils import escape
+
+from criador_procedimento.modules.geracao.schemas import ConteudoDoProcedimento
 
 CAMINHOS_LIBREOFFICE = [
     "soffice",
@@ -65,40 +82,29 @@ def _bloco_codigo(codigo: str) -> list:
     return paragrafos
 
 
-def _lista(valor) -> list:
-    if not valor:
-        return []
-    if isinstance(valor, str):
-        return [valor]
-    return [item for item in valor if str(item or "").strip()]
+def montar_introducao(conteudo: ConteudoDoProcedimento) -> list:
+    return [_paragrafo(p) for p in conteudo.introducao]
 
 
-def montar_introducao(conteudo: dict) -> list:
-    return [_paragrafo(p) for p in _lista(conteudo.get("introducao"))]
-
-
-def montar_procedimento(conteudo: dict) -> list:
+def montar_procedimento(conteudo: ConteudoDoProcedimento) -> list:
     elementos = []
 
-    pre_requisitos = _lista(conteudo.get("pre_requisitos"))
-    if pre_requisitos:
+    if conteudo.pre_requisitos:
         elementos.append(_titulo("Pré-requisitos", 2))
-        elementos += [_marcador(item) for item in pre_requisitos]
+        elementos += [_marcador(item) for item in conteudo.pre_requisitos]
 
-    passos = conteudo.get("passos") or []
-    if passos:
+    if conteudo.passos:
         elementos.append(_titulo("Passo a passo", 2))
-    for numero, passo in enumerate(passos, start=1):
-        elementos.append(_titulo(f"Passo {numero} - {passo.get('titulo', '')}", 3))
-        elementos += [_paragrafo(p) for p in _lista(passo.get("descricao"))]
-        elementos += [_marcador(item) for item in _lista(passo.get("itens"))]
-        if str(passo.get("codigo") or "").strip():
-            elementos += _bloco_codigo(passo["codigo"])
+    for numero, passo in enumerate(conteudo.passos, start=1):
+        elementos.append(_titulo(f"Passo {numero} - {passo.titulo}", 3))
+        elementos += [_paragrafo(p) for p in passo.descricao]
+        elementos += [_marcador(item) for item in passo.itens]
+        if passo.codigo.strip():
+            elementos += _bloco_codigo(passo.codigo)
 
-    validacao = _lista(conteudo.get("validacao"))
-    if validacao:
+    if conteudo.validacao:
         elementos.append(_titulo("Validação da coleta", 2))
-        elementos += [_marcador(item) for item in validacao]
+        elementos += [_marcador(item) for item in conteudo.validacao]
 
     return elementos
 
@@ -126,7 +132,7 @@ def _adicionar_numeracao(numbering_xml: str) -> str:
     return numbering_xml.replace("</w:numbering>", "<w:num " + num + "</w:numbering>")
 
 
-def gerar_docx_procedimento(caminho_modelo: str, caminho_saida: str, tecnologia: str, conteudo: dict, data_documento: date = None) -> None:
+def gerar_docx(caminho_modelo, caminho_saida, tecnologia: str, conteudo: ConteudoDoProcedimento, data_documento: date = None) -> None:
     data_documento = data_documento or date.today()
 
     with zipfile.ZipFile(caminho_modelo) as modelo:
@@ -156,7 +162,7 @@ def localizar_libreoffice(caminho_configurado: str = None) -> str:
     return None
 
 
-def converter_docx_para_pdf(libreoffice: str, caminho_docx: str, diretorio_saida: str) -> str:
+def converter_docx_para_pdf(libreoffice: str, caminho_docx, diretorio_saida) -> str:
     caminho_pdf = os.path.join(diretorio_saida, Path(caminho_docx).stem + ".pdf")
     if os.path.isfile(caminho_pdf):
         os.remove(caminho_pdf)
@@ -168,8 +174,8 @@ def converter_docx_para_pdf(libreoffice: str, caminho_docx: str, diretorio_saida
                 f"-env:UserInstallation={Path(perfil).as_uri()}",
                 "--headless",
                 "--convert-to", "pdf",
-                "--outdir", diretorio_saida,
-                caminho_docx,
+                "--outdir", str(diretorio_saida),
+                str(caminho_docx),
             ],
             capture_output=True,
             text=True,
@@ -181,11 +187,11 @@ def converter_docx_para_pdf(libreoffice: str, caminho_docx: str, diretorio_saida
     return caminho_pdf
 
 
-def gerar_pdf_procedimento(caminho_modelo: str, caminho_pdf: str, tecnologia: str, conteudo: dict, libreoffice: str) -> None:
+def gerar_pdf(caminho_modelo, caminho_pdf, tecnologia: str, conteudo: ConteudoDoProcedimento, libreoffice: str) -> None:
     diretorio_saida = os.path.dirname(os.path.abspath(caminho_pdf))
     nome_base = Path(caminho_pdf).stem
 
     with tempfile.TemporaryDirectory() as diretorio_temporario:
         caminho_docx = os.path.join(diretorio_temporario, f"{nome_base}.docx")
-        gerar_docx_procedimento(caminho_modelo, caminho_docx, tecnologia, conteudo)
+        gerar_docx(caminho_modelo, caminho_docx, tecnologia, conteudo)
         converter_docx_para_pdf(libreoffice, caminho_docx, diretorio_saida)

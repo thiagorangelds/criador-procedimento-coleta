@@ -307,40 +307,6 @@
     border-top: 1px solid var(--sec-800);
   }
 
-  #modelos-selecionados { margin-top: 12px; list-style: none; counter-reset: ordem; }
-  #modelos-selecionados li {
-    counter-increment: ordem;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--sec-800);
-  }
-  #modelos-selecionados li:last-child { border-bottom: 0; }
-  .item-modelo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .item-modelo .nome { flex: 1; min-width: 150px; font-size: 14px; color: var(--sec-300); }
-  .item-modelo .nome::before { content: counter(ordem) "."; color: var(--sec-400); margin-right: 8px; }
-  .item-modelo button { height: 28px; padding: 0 10px; font-size: 12px; }
-  .fora { color: var(--atencao); font-size: 12px; }
-  .sem-modelos { color: var(--erro); font-size: 14px; }
-  .seletor { margin-top: 12px; }
-  .seletor summary { cursor: pointer; color: var(--pri-400); font-size: 14px; width: fit-content; }
-  .seletor-painel {
-    margin-top: 12px;
-    border: 1px solid var(--sec-800);
-    border-radius: var(--raio);
-    background: var(--sec-900);
-    padding: 16px;
-  }
-  .opcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px 16px; }
-  .seletor-rodape {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    margin-top: 16px;
-  }
-  .seletor-rodape .hint { margin: 0; }
-  .seletor-rodape button { height: 32px; font-size: 12px; }
-
   /* ---- log ---- */
   #log {
     background: var(--sec-950);
@@ -414,6 +380,18 @@
   td a { display: inline-flex; align-items: center; gap: 8px; }
   .icone-arquivo { flex: none; }
   .vazio { color: var(--sec-400); font-size: 14px; }
+  .aviso-servidor {
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    border: 1px solid var(--erro);
+    border-radius: var(--raio);
+    background: var(--erro-bg);
+    color: var(--texto);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .formato { margin-top: 20px; }
+  code { font: 12px/1 var(--mono); color: var(--pri-400); }
 </style>
 </head>
 <body>
@@ -424,12 +402,12 @@
       <p class="sub">Documentação de coleta de logs, gerada por tecnologia.</p>
     </div>
     <span class="status" id="status"><span class="ponto" aria-hidden="true"></span><span id="status-texto">Parado</span></span>
-    <button type="button" class="engrenagem" id="abrir-config" aria-haspopup="dialog" aria-label="Configuração" title="Configuração">
+    <button type="button" class="engrenagem" id="abrir-acesso" hidden aria-haspopup="dialog" aria-label="Token de acesso" title="Token de acesso">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.35.4.65.73.86.3.19.65.29 1 .29H21a2 2 0 1 1 0 4h-.09c-.7 0-1.33.42-1.6 1.06Z"/>
+        <rect x="4" y="10" width="16" height="11" rx="2"/>
+        <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
       </svg>
-      <span class="aviso-config" id="aviso-config" hidden aria-hidden="true"></span>
+      <span class="aviso-config" id="aviso-acesso" hidden aria-hidden="true"></span>
     </button>
   </div>
 </header>
@@ -437,6 +415,8 @@
 <main>
   <form id="form" autocomplete="off">
     <div class="principal">
+      <p class="aviso-servidor" id="aviso-servidor" hidden></p>
+
       <label id="rotulo-tecnologias">Tecnologias</label>
       <div class="tec-cabecalho" aria-hidden="true">
         <span>Tecnologia</span>
@@ -445,13 +425,22 @@
       <div id="tecnologias" role="group" aria-labelledby="rotulo-tecnologias" aria-describedby="dica-tecnologias"></div>
       <button type="button" id="adicionar-tecnologia">Adicionar tecnologia</button>
       <span class="hint" id="dica-tecnologias">Cada linha gera o documento completo e o Procedimento de Coleta. Deixe a forma de coleta em branco quando ainda não souber qual é a melhor: o Gemini escolhe e justifica no documento.</span>
+
+      <fieldset class="formato">
+        <legend>Formato do Procedimento de Coleta</legend>
+        <div class="radios">
+          <label><input type="radio" name="formato" value="docx" checked> DOCX</label>
+          <label><input type="radio" name="formato" value="pdf"> PDF</label>
+        </div>
+        <span class="hint" id="dica-formato"></span>
+      </fieldset>
+
       <div class="acoes">
         <button type="submit" class="primario" id="gerar">Gerar documentos</button>
         <button type="button" class="perigo" id="cancelar" hidden>Parar geração</button>
       </div>
       <div class="mensagem" id="mensagem" role="status"></div>
     </div>
-
   </form>
 
   <div class="saida">
@@ -467,13 +456,13 @@
   </div>
 </main>
 
-<dialog class="modal" id="configuracao" aria-labelledby="titulo-config">
+<dialog class="modal" id="acesso" aria-labelledby="titulo-acesso">
   <div class="modal-topo">
     <div>
-      <h2 id="titulo-config">Configuração</h2>
-      <p class="modal-sub" id="resumo-config"></p>
+      <h2 id="titulo-acesso">Token de acesso</h2>
+      <p class="modal-sub">Este servidor exige um token nas chamadas da API. Ele fica guardado só neste navegador.</p>
     </div>
-    <button type="button" class="icone-fechar" id="fechar-config" aria-label="Fechar">
+    <button type="button" class="icone-fechar" id="fechar-acesso" aria-label="Fechar">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
         <path d="M18 6 6 18M6 6l12 12"/>
       </svg>
@@ -481,63 +470,73 @@
   </div>
   <div class="modal-corpo styled-scroll-bar">
     <div class="campos">
-        <div>
-          <label for="API_KEY">API key do Gemini</label>
-          <div class="linha">
-            <input type="password" id="API_KEY" spellcheck="false">
-            <button type="button" id="mostrar-chave" aria-pressed="false" aria-label="Mostrar API key">Mostrar</button>
-          </div>
+      <div>
+        <label for="token">Token</label>
+        <div class="linha">
+          <input type="password" id="token" spellcheck="false">
+          <button type="button" id="mostrar-token" aria-pressed="false" aria-label="Mostrar token">Mostrar</button>
         </div>
-        <fieldset>
-          <legend>Formato do Procedimento de Coleta</legend>
-          <div class="radios">
-            <label><input type="radio" name="FORMATO_SAIDA" value="docx"> DOCX</label>
-            <label><input type="radio" name="FORMATO_SAIDA" value="pdf"> PDF</label>
-          </div>
-          <span class="hint">PDF precisa do LibreOffice instalado.</span>
-        </fieldset>
-        <div id="campo-libreoffice">
-          <label for="LIBREOFFICE">Executável do LibreOffice <span class="opcional">(opcional)</span></label>
-          <input type="text" id="LIBREOFFICE" placeholder="Detectado automaticamente se estiver no PATH" spellcheck="false">
-        </div>
-        <div>
-          <label for="MODELO_DOCX">Modelo Word <span class="opcional">(opcional)</span></label>
-          <input type="text" id="MODELO_DOCX" spellcheck="false">
-        </div>
-        <fieldset class="modelos">
-          <legend>Modelos do Gemini, em ordem de uso</legend>
-          <span class="hint" id="dica-modelos">O primeiro é usado sempre. Se ele atingir o limite ou ficar indisponível, o próximo da lista assume.</span>
-          <ol id="modelos-selecionados" aria-describedby="dica-modelos"></ol>
-          <details class="seletor" id="seletor-modelos">
-            <summary>Escolher modelos do free tier</summary>
-            <div class="seletor-painel">
-              <div id="opcoes-modelos" class="opcoes"></div>
-              <div class="seletor-rodape">
-                <span class="hint" id="origem-modelos"></span>
-                <button type="button" id="atualizar-modelos">Atualizar lista</button>
-              </div>
-            </div>
-          </details>
-        </fieldset>
-        <div>
-          <label for="RETRY">Tentativas por modelo</label>
-          <input type="number" id="RETRY" min="1" max="20" aria-describedby="dica-retry">
-          <span class="hint" id="dica-retry">Quando a API recusa por limite de uso ou indisponibilidade.</span>
-        </div>
+        <span class="hint">O mesmo valor da chave <code>API_TOKEN</code> no <code>config.yml</code> do servidor, ou da variável <code>CRIADOR_API_TOKEN</code>.</span>
+      </div>
     </div>
   </div>
   <div class="modal-rodape">
-    <button type="button" id="fechar-config-rodape">Fechar</button>
-    <button type="button" class="primario" id="salvar">Salvar configuração</button>
+    <button type="button" id="fechar-acesso-rodape">Fechar</button>
+    <button type="button" class="primario" id="salvar-token">Salvar token</button>
   </div>
 </dialog>
 <script>
   const $ = (id) => document.getElementById(id);
   const VAZIO = "Os documentos aparecem aqui depois que você clicar em Gerar documentos.";
+  const SEPARADOR = " via ";
+  const CHAVE_TOKEN = "criador.token";
+  const CHAVE_TECNOLOGIAS = "criador.tecnologias";
+
+  let token = localStorage.getItem(CHAVE_TOKEN) || "";
+  let authRequerida = false;
+  let jobAtual = null;
   let proximaLinha = 0;
   let acompanhando = false;
-  let modelosSelecionados = [];
-  let modelosDisponiveis = [];
+
+  // ---- HTTP -------------------------------------------------------------
+  // O token vai em cabeçalho, nunca na URL: query string vaza em log de proxy
+  // e no histórico do navegador.
+
+  async function requisitar(url, opcoes) {
+    const config = { ...(opcoes || {}) };
+    config.headers = { ...(config.headers || {}) };
+    if (token) config.headers["Authorization"] = "Bearer " + token;
+
+    let resposta;
+    try {
+      resposta = await fetch(url, config);
+    } catch (e) {
+      return { ok: false, status: 0, dados: { erros: ["Não foi possível falar com o servidor."] } };
+    }
+    let dados = {};
+    try { dados = await resposta.json(); } catch (e) { /* corpo vazio ou binário */ }
+
+    if (resposta.status === 401) {
+      authRequerida = true;
+      atualizarAcesso();
+      abrirAcesso();
+    }
+    return { ok: resposta.ok, status: resposta.status, dados };
+  }
+
+  function errosDe(dados, padrao) {
+    return (dados && dados.erros && dados.erros.length) ? dados.erros : [padrao];
+  }
+
+  function enviarJson(url, corpo) {
+    return requisitar(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(corpo || {}),
+    });
+  }
+
+  // ---- tecnologias ------------------------------------------------------
 
   function botao(texto, rotulo, acao, desabilitado) {
     const b = document.createElement("button");
@@ -548,8 +547,6 @@
     b.addEventListener("click", acao);
     return b;
   }
-
-  const SEPARADOR = " via ";
 
   function separarEntrada(linha) {
     const corte = linha.indexOf(SEPARADOR);
@@ -581,9 +578,10 @@
   function adicionarTecnologia(tecnologia, forma) {
     const linha = document.createElement("div");
     linha.className = "tec-linha";
-    const remover = botao("\u00d7", "Remover esta tecnologia", () => {
+    const remover = botao("×", "Remover esta tecnologia", () => {
       linha.remove();
       if (!$("tecnologias").children.length) adicionarTecnologia();
+      salvarTecnologias();
     });
     remover.className = "tec-remover";
     // No estreito o cabeçalho de colunas some, então cada campo leva o seu rótulo.
@@ -605,13 +603,6 @@
     return linha;
   }
 
-  function renderizarTecnologias(entradas) {
-    $("tecnologias").replaceChildren();
-    const linhas = (entradas || []).filter((e) => e && e.trim());
-    if (!linhas.length) { adicionarTecnologia(); return; }
-    linhas.forEach((entrada) => adicionarTecnologia(...separarEntrada(entrada)));
-  }
-
   function lerTecnologias() {
     return [...document.querySelectorAll(".tec-linha")]
       .map((linha) => [linha.querySelector(".tec-nome").value.trim(), linha.querySelector(".tec-forma").value.trim()])
@@ -619,79 +610,20 @@
       .map(([tecnologia, forma]) => juntarEntrada(tecnologia, forma));
   }
 
-  function moverModelo(indice, deslocamento) {
-    const destino = indice + deslocamento;
-    [modelosSelecionados[indice], modelosSelecionados[destino]] = [modelosSelecionados[destino], modelosSelecionados[indice]];
-    renderizarModelos();
+  // A lista não é mais configuração do servidor — numa instalação compartilhada
+  // ela é de quem está usando o navegador, não de todo mundo.
+  function salvarTecnologias() {
+    localStorage.setItem(CHAVE_TECNOLOGIAS, JSON.stringify(lerTecnologias()));
   }
 
-  function alternarModelo(nome, habilitar) {
-    modelosSelecionados = modelosSelecionados.filter((m) => m !== nome);
-    if (habilitar) modelosSelecionados.push(nome);
-    renderizarModelos();
+  function restaurarTecnologias() {
+    let guardadas = [];
+    try { guardadas = JSON.parse(localStorage.getItem(CHAVE_TECNOLOGIAS)) || []; } catch (e) { /* lixo no storage */ }
+    if (!guardadas.length) { adicionarTecnologia(); return; }
+    guardadas.forEach((entrada) => adicionarTecnologia(...separarEntrada(entrada)));
   }
 
-  function renderizarModelos() {
-    const lista = $("modelos-selecionados");
-    lista.replaceChildren();
-    if (!modelosSelecionados.length) {
-      const li = document.createElement("li");
-      li.className = "sem-modelos";
-      li.textContent = "Nenhum modelo habilitado. Escolha ao menos um abaixo.";
-      lista.appendChild(li);
-    }
-    modelosSelecionados.forEach((nome, i) => {
-      const li = document.createElement("li");
-      const linha = document.createElement("div");
-      linha.className = "item-modelo";
-      const rotulo = document.createElement("span");
-      rotulo.className = "nome";
-      rotulo.textContent = nome;
-      if (modelosDisponiveis.length && !modelosDisponiveis.includes(nome)) {
-        const fora = document.createElement("span");
-        fora.className = "fora";
-        fora.textContent = " (fora da lista do free tier)";
-        rotulo.appendChild(fora);
-      }
-      linha.append(
-        rotulo,
-        botao("Subir", `Subir ${nome}`, () => moverModelo(i, -1), i === 0),
-        botao("Descer", `Descer ${nome}`, () => moverModelo(i, 1), i === modelosSelecionados.length - 1),
-        botao("Remover", `Remover ${nome}`, () => alternarModelo(nome, false)),
-      );
-      li.appendChild(linha);
-      lista.appendChild(li);
-    });
-
-    const opcoes = $("opcoes-modelos");
-    opcoes.replaceChildren();
-    const todos = [...modelosDisponiveis, ...modelosSelecionados.filter((m) => !modelosDisponiveis.includes(m))];
-    todos.forEach((nome) => {
-      const label = document.createElement("label");
-      const caixa = document.createElement("input");
-      caixa.type = "checkbox";
-      caixa.checked = modelosSelecionados.includes(nome);
-      caixa.addEventListener("change", () => alternarModelo(nome, caixa.checked));
-      label.append(caixa, document.createTextNode(nome));
-      opcoes.appendChild(label);
-    });
-  }
-
-  async function carregarModelos() {
-    const botaoAtualizar = $("atualizar-modelos");
-    botaoAtualizar.disabled = true;
-    $("origem-modelos").textContent = "Buscando modelos...";
-    const { ok, dados } = await requisitar("/api/modelos", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ API_KEY: $("API_KEY").value }),
-    });
-    botaoAtualizar.disabled = false;
-    if (!ok) { $("origem-modelos").textContent = "Não foi possível buscar os modelos."; return; }
-    modelosDisponiveis = dados.modelos || [];
-    $("origem-modelos").textContent = dados.aviso || "Lista obtida da API do Gemini com a sua key.";
-    renderizarModelos();
-  }
+  // ---- mensagens e estado ----------------------------------------------
 
   function mostrarMensagem(texto, tipo) {
     const el = $("mensagem");
@@ -707,74 +639,62 @@
   }
 
   function formatoSelecionado() {
-    const marcado = document.querySelector("input[name=FORMATO_SAIDA]:checked");
+    const marcado = document.querySelector("input[name=formato]:checked");
     return marcado ? marcado.value : "docx";
   }
 
-  function atualizarCampoLibreoffice() {
-    $("campo-libreoffice").hidden = formatoSelecionado() !== "pdf";
+  function definirExecutando(executando) {
+    $("gerar").disabled = executando;
+    $("cancelar").hidden = !executando;
+    $("status").classList.toggle("ativo", executando);
+    $("status-texto").textContent = executando ? "Gerando" : "Parado";
   }
 
-  function atualizarResumo() {
-    const temChave = !!$("API_KEY").value.trim();
-    const chave = temChave ? "API key salva" : "falta a API key";
-    $("resumo-config").textContent = `${chave} · formato ${formatoSelecionado().toUpperCase()}`;
-    $("aviso-config").hidden = temChave;
-    $("abrir-config").title = temChave ? "Configuração" : "Configuração — falta a API key";
+  function atualizarAcesso() {
+    $("abrir-acesso").hidden = !authRequerida;
+    $("aviso-acesso").hidden = !(authRequerida && !token);
   }
 
-  function abrirConfiguracao(focarChave) {
-    const modal = $("configuracao");
+  function abrirAcesso() {
+    const modal = $("acesso");
+    $("token").value = token;
     if (!modal.open) modal.showModal();
-    if (focarChave) $("API_KEY").focus();
+    $("token").focus();
   }
 
-  function lerFormulario() {
-    return {
-      API_KEY: $("API_KEY").value,
-      TECNOLOGIAS: lerTecnologias(),
-      MODELOS: modelosSelecionados.slice(),
-      RETRY: $("RETRY").value,
-      FORMATO_SAIDA: formatoSelecionado(),
-      LIBREOFFICE: $("LIBREOFFICE").value,
-      MODELO_DOCX: $("MODELO_DOCX").value,
-    };
+  // ---- servidor ---------------------------------------------------------
+
+  async function carregarSaude() {
+    const { ok, dados } = await requisitar("/api/saude");
+    if (!ok) return null;
+    authRequerida = !!dados.auth_requerida;
+    atualizarAcesso();
+    if (authRequerida && !token) abrirAcesso();
+    return dados;
   }
 
-  async function requisitar(url, opcoes) {
-    const resposta = await fetch(url, opcoes);
-    let dados = {};
-    try { dados = await resposta.json(); } catch (e) { /* corpo vazio */ }
-    return { ok: resposta.ok, status: resposta.status, dados };
-  }
-
-  async function enviar(url) {
-    return requisitar(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(lerFormulario()),
-    });
-  }
-
-  async function carregarConfiguracao() {
+  async function carregarAjustes() {
     const { ok, dados } = await requisitar("/api/config");
-    if (!ok) { mostrarMensagem(dados.erro || "Não foi possível ler a configuração salva.", "erro"); return; }
-    const c = dados.config;
-    $("API_KEY").value = c.API_KEY || "";
-    renderizarTecnologias(c.TECNOLOGIAS);
-    modelosSelecionados = c.MODELOS || [];
-    renderizarModelos();
-    $("RETRY").value = c.RETRY;
-    $("LIBREOFFICE").value = c.LIBREOFFICE || "";
-    $("MODELO_DOCX").value = c.MODELO_DOCX || "";
-    $("MODELO_DOCX").placeholder = dados.modelo_docx_padrao;
-    const radio = document.querySelector(`input[name=FORMATO_SAIDA][value="${c.FORMATO_SAIDA}"]`);
+    const aviso = $("aviso-servidor");
+    if (!ok) { aviso.hidden = true; return; }
+
+    const radio = document.querySelector(`input[name=formato][value="${dados.formato_saida}"]`);
     if (radio) radio.checked = true;
-    atualizarCampoLibreoffice();
-    atualizarResumo();
-    if (!c.API_KEY) abrirConfiguracao(false);
-    carregarModelos();
+
+    const pdf = document.querySelector('input[name=formato][value="pdf"]');
+    pdf.disabled = !dados.pdf_disponivel;
+    if (!dados.pdf_disponivel && pdf.checked) document.querySelector('input[name=formato][value="docx"]').checked = true;
+    $("dica-formato").textContent = dados.pdf_disponivel
+      ? `Modelos do Gemini em uso: ${dados.modelos.join(", ")}.`
+      : "PDF indisponível: o LibreOffice não foi encontrado no servidor.";
+
+    aviso.hidden = dados.api_key_definida;
+    if (!dados.api_key_definida) {
+      aviso.textContent = `API key do Gemini não configurada no servidor. Preencha API_KEY em ${dados.arquivo_config} (ou defina CRIADOR_API_KEY) e reinicie.`;
+    }
   }
+
+  // ---- jobs -------------------------------------------------------------
 
   function adicionarLog(linhas) {
     const log = $("log");
@@ -789,34 +709,49 @@
     if (noFim) log.scrollTop = log.scrollHeight;
   }
 
-  function definirExecutando(executando) {
-    $("gerar").disabled = executando;
-    $("salvar").disabled = executando;
-    $("cancelar").hidden = !executando;
-    $("status").classList.toggle("ativo", executando);
-    $("status-texto").textContent = executando ? "Gerando" : "Parado";
-  }
+  const FIM = { concluido: "ok", falhou: "erro", cancelado: "" };
 
-  async function acompanhar() {
+  async function acompanhar(jobId) {
     if (acompanhando) return;
+    jobAtual = jobId;
     acompanhando = true;
+    definirExecutando(true);
     try {
       while (true) {
-        const { ok, dados } = await requisitar(`/api/status?desde=${proximaLinha}`);
+        const { ok, dados } = await requisitar(`/api/jobs/${jobId}/log?desde=${proximaLinha}`);
         if (ok) {
-          if (dados.total < proximaLinha) { $("log").replaceChildren(); proximaLinha = 0; continue; }
           adicionarLog(dados.linhas);
           proximaLinha = dados.total;
-          definirExecutando(dados.executando);
-          if (!dados.executando) break;
+          if (dados.estado in FIM) { await encerrar(jobId, dados.estado); break; }
+        } else if (dados.erros) {
+          mostrarMensagem(dados.erros, "erro");
+          break;
         }
         await new Promise((r) => setTimeout(r, 1000));
       }
     } finally {
       acompanhando = false;
+      jobAtual = null;
+      definirExecutando(false);
       carregarArquivos();
     }
   }
+
+  async function encerrar(jobId, estado) {
+    const { ok, dados } = await requisitar(`/api/jobs/${jobId}`);
+    if (estado === "cancelado") { mostrarMensagem("Geração cancelada.", ""); return; }
+    if (!ok) { mostrarMensagem("Geração encerrada.", ""); return; }
+
+    const falhas = (dados.resultados || []).filter((r) => r.erro);
+    if (estado === "concluido" && !falhas.length) {
+      mostrarMensagem("Geração concluída.", "ok");
+      return;
+    }
+    const motivos = falhas.length ? falhas.map((r) => `${r.tecnologia}: ${r.erro}`) : [dados.erro || "Falha na geração."];
+    mostrarMensagem(motivos, "erro");
+  }
+
+  // ---- arquivos ---------------------------------------------------------
 
   function formatarTamanho(bytes) {
     if (bytes < 1024) return bytes + " B";
@@ -925,12 +860,30 @@
     return svg;
   }
 
+  // Com token, o download não pode ser um clique de link: o navegador não manda
+  // cabeçalho em navegação. Busca-se o arquivo por fetch e salva-se o blob.
+  async function baixarComToken(evento, url, nome) {
+    if (!token) return;
+    evento.preventDefault();
+    const resposta = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+    if (!resposta.ok) { mostrarMensagem(`Não foi possível baixar ${nome}.`, "erro"); return; }
+    const endereco = URL.createObjectURL(await resposta.blob());
+    const link = document.createElement("a");
+    link.href = endereco;
+    link.download = nome;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(endereco);
+  }
+
   function linhaDeArquivo(a) {
     const tr = document.createElement("tr");
     const tdNome = document.createElement("td");
     const link = document.createElement("a");
-    link.href = "/arquivos/" + a.caminho.split("/").map(encodeURIComponent).join("/");
+    link.href = a.url;
     link.append(iconeDeArquivo(a.nome), document.createTextNode(a.nome));  // a pasta já está na linha do grupo
+    link.addEventListener("click", (evento) => baixarComToken(evento, a.url, a.nome));
     tdNome.appendChild(link);
     const tdTamanho = document.createElement("td");
     tdTamanho.className = "num";
@@ -960,10 +913,10 @@
   }
 
   async function carregarArquivos() {
-    const { ok, dados } = await requisitar("/api/arquivos");
+    const { ok, dados } = await requisitar("/api/artefatos");
     const alvo = $("arquivos");
-    if (!ok || !dados.arquivos.length) { mostrarVazio(alvo); return; }
-    const grupos = agruparPorPasta(dados.arquivos);
+    if (!ok || !Array.isArray(dados) || !dados.length) { mostrarVazio(alvo); return; }
+    const grupos = agruparPorPasta(dados);
     ajustarPastasAbertas([...grupos.keys()]);
 
     const tabela = document.createElement("table");
@@ -988,67 +941,71 @@
     alvo.replaceChildren(tabela);
   }
 
+  // ---- eventos ----------------------------------------------------------
+
   $("form").addEventListener("submit", async (evento) => {
     evento.preventDefault();
     mostrarMensagem("");
-    const { ok, dados } = await enviar("/api/gerar");
-    if (!ok) {
-      const erros = dados.erros || ["Não foi possível iniciar a geração."];
-      mostrarMensagem(erros, "erro");
-      if (erros.some((e) => e.includes("API Key"))) abrirConfiguracao(true);
-      return;
-    }
-    atualizarResumo();
+    salvarTecnologias();
+
+    const tecnologias = lerTecnologias();
+    if (!tecnologias.length) { mostrarMensagem(["Informe ao menos uma tecnologia."], "erro"); return; }
+
+    const { ok, dados } = await enviarJson("/api/jobs", { tecnologias, formato_saida: formatoSelecionado() });
+    if (!ok) { mostrarMensagem(errosDe(dados, "Não foi possível iniciar a geração."), "erro"); return; }
+
     $("log").replaceChildren();
     proximaLinha = 0;
-    mostrarMensagem("Geração iniciada.", "ok");
-    definirExecutando(true);
-    acompanhar();
-  });
-
-  $("salvar").addEventListener("click", async () => {
-    const { ok, dados } = await enviar("/api/config");
-    if (ok) { atualizarResumo(); mostrarMensagem("Configuração salva.", "ok"); }
-    else mostrarMensagem(dados.erros || ["Não foi possível salvar a configuração."], "erro");
+    mostrarMensagem(`Geração iniciada (job ${dados.id}).`, "ok");
+    acompanhar(dados.id);
   });
 
   $("cancelar").addEventListener("click", async () => {
-    await requisitar("/api/cancelar", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-    mostrarMensagem("Parando: a geração termina antes da próxima tecnologia.");
+    if (!jobAtual) return;
+    const { ok, dados } = await enviarJson(`/api/jobs/${jobAtual}/cancelar`);
+    mostrarMensagem(ok ? "Parando: a geração termina antes da próxima tecnologia." : errosDe(dados, "Não foi possível cancelar."), ok ? "" : "erro");
   });
-
-  $("mostrar-chave").addEventListener("click", () => {
-    const campo = $("API_KEY");
-    const mostrar = campo.type === "password";
-    campo.type = mostrar ? "text" : "password";
-    const botao = $("mostrar-chave");
-    botao.textContent = mostrar ? "Ocultar" : "Mostrar";
-    botao.setAttribute("aria-pressed", String(mostrar));
-    botao.setAttribute("aria-label", mostrar ? "Ocultar API key" : "Mostrar API key");
-  });
-
-  $("abrir-config").addEventListener("click", () => abrirConfiguracao(false));
-  const fechar = () => $("configuracao").close();
-  $("fechar-config").addEventListener("click", fechar);
-  $("fechar-config-rodape").addEventListener("click", fechar);
 
   $("adicionar-tecnologia").addEventListener("click", () => {
     adicionarTecnologia().querySelector(".tec-nome").focus();
   });
+  $("tecnologias").addEventListener("input", salvarTecnologias);
 
-  $("atualizar-modelos").addEventListener("click", carregarModelos);
-  $("API_KEY").addEventListener("change", () => { atualizarResumo(); carregarModelos(); });
+  $("abrir-acesso").addEventListener("click", abrirAcesso);
+  const fecharAcesso = () => $("acesso").close();
+  $("fechar-acesso").addEventListener("click", fecharAcesso);
+  $("fechar-acesso-rodape").addEventListener("click", fecharAcesso);
 
-  document.querySelectorAll("input[name=FORMATO_SAIDA]").forEach((r) => r.addEventListener("change", () => {
-    atualizarCampoLibreoffice();
-    atualizarResumo();
-  }));
+  $("salvar-token").addEventListener("click", async () => {
+    token = $("token").value.trim();
+    localStorage.setItem(CHAVE_TOKEN, token);
+    atualizarAcesso();
+    fecharAcesso();
+    const saude = await carregarSaude();
+    if (saude) { await carregarAjustes(); carregarArquivos(); }
+  });
 
-  mostrarVazio($("arquivos"));
-  adicionarTecnologia();
-  carregarConfiguracao();
-  carregarArquivos();
-  acompanhar();
+  $("mostrar-token").addEventListener("click", () => {
+    const campo = $("token");
+    const mostrar = campo.type === "password";
+    campo.type = mostrar ? "text" : "password";
+    const b = $("mostrar-token");
+    b.textContent = mostrar ? "Ocultar" : "Mostrar";
+    b.setAttribute("aria-pressed", String(mostrar));
+    b.setAttribute("aria-label", mostrar ? "Ocultar token" : "Mostrar token");
+  });
+
+  // ---- início -----------------------------------------------------------
+
+  (async () => {
+    mostrarVazio($("arquivos"));
+    restaurarTecnologias();
+    const saude = await carregarSaude();
+    await carregarAjustes();
+    await carregarArquivos();
+    // Recarregar a página no meio de uma geração reconecta no job que está rodando.
+    if (saude && saude.job_ativo) acompanhar(saude.job_ativo);
+  })();
 </script>
 </body>
 </html>

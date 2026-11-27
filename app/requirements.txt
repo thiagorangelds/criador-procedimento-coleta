@@ -1,3 +1,0 @@
-# Para FORMATO_SAIDA "pdf" é necessário o LibreOffice instalado (dependência de sistema, não instalável via pip)
-google-genai>=1.0.0
-PyYAML>=6.0
