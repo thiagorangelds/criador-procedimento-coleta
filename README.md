@@ -51,6 +51,18 @@ criador-procedimento-api
 
 A instalação é **editável** de propósito: o `criador-procedimento --atualizar` faz `git pull`, e só assim o código novo passa a valer sem reinstalar.
 
+## O container não substitui o comando local
+
+São dois jeitos independentes de rodar, e **o `criador-procedimento` não usa o container**: ele sobe Python direto na sua máquina e enxerga o LibreOffice da sua máquina. Quem traz o LibreOffice embutido é a imagem — e só vale se você subir a imagem.
+
+| | `criador-procedimento` | `docker compose up -d` |
+|---|---|---|
+| Onde roda | Python na sua máquina | container |
+| PDF | só se a máquina tiver LibreOffice | sempre |
+| Configuração | `backend/config.yml` | variáveis `CRIADOR_*` |
+
+Para gerar PDF sem instalar o LibreOffice na sua máquina, use o container. O contrário também vale: `brew install --cask libreoffice` e o comando local passa a gerar PDF.
+
 ## Atualização
 
 Use qualquer uma das opções:
@@ -64,6 +76,8 @@ curl -fsSL https://raw.githubusercontent.com/thiagorangelds/criador-procedimento
 ```
 
 As duas encerram o servidor se ele estiver no ar, atualizam o código e as dependências e preservam o seu `config.yml`, incluindo a API key.
+
+Se a atualização mudar o próprio `instalar.sh`, ele reexecuta a versão nova e segue por ela. Sem isso, o fluxo que já está na memória do bash continuaria validando o layout antigo contra a árvore nova e abortaria no meio — com o código já atualizado e o comando apontando para arquivos que acabaram de sair do lugar.
 
 **Vindo de uma versão anterior à divisão front/back:** a configuração e os documentos já gerados são movidos de `app/` para `backend/` automaticamente, e a pasta `app/` é removida quando não sobra nada seu nela. Vindo de uma versão anterior ainda à pasta `app/`, prefira o `curl`, que resolve numa execução só: pelo `criador-procedimento --atualizar`, a primeira execução termina com erro, porque ainda usa o instalador antigo, e a segunda conclui.
 
@@ -239,7 +253,7 @@ docker run -d -p 8765:8765 --env-file backend/.env -v procedimentos:/dados criad
 |---|---|
 | Usuário | `criador`, uid 10001, não-root. O uid é fixo para a permissão do volume não depender de quem buildou |
 | Documentos | `/dados`, declarado como `VOLUME`. **Sem volume, cada deploy perde o histórico** |
-| Segredos | Só por `--env-file`/`env_file`. O `.dockerignore` barra o `backend/.env`, então nada de segredo entra na imagem |
+| Segredos | Só por `--env-file`/`env_file`. O `.dockerignore` barra `backend/.env` **e `backend/config.yml`**, porque o contexto de build pode ser uma instalação em uso com a API key preenchida. A imagem roda com os padrões do código; para ajustar `MODELOS` ou `RETRY`, monte o seu: `-v ./meu-config.yml:/app/backend/config.yml:ro` |
 | Health check | `GET /api/saude`, que não exige token. Já embutido no `HEALTHCHECK` |
 | DOCX e PDF | A imagem traz o LibreOffice e as fontes do modelo Word, então gera nos dois formatos sem nada a mais |
 | Tamanho | ~900 MB; ~300 MB sem o LibreOffice |

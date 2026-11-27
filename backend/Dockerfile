@@ -66,6 +66,9 @@ RUN pip install -e ./backend
 # Instalação editável e árvore espelhando o repositório porque os caminhos são
 # derivados de __file__: config.yml, templates/ e o front precisam continuar
 # ao lado do pacote. Instalado normal, eles cairiam dentro do site-packages.
+# O .dockerignore barra backend/config.yml e backend/.env: o contexto de build
+# pode ser uma instalação em uso, com a API key preenchida. A imagem roda com
+# os padrões do código e recebe o que importa por CRIADOR_*.
 COPY backend/ backend/
 COPY frontend/ frontend/
 

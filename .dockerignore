@@ -8,7 +8,15 @@
 **/*.egg-info
 **/.pytest_cache
 
-# segredo e dados nunca entram na imagem: vêm por env_file e volume
+# Segredo e dados nunca entram na imagem: vêm por env_file e volume.
+#
+# O config.yml fica de fora porque o contexto de build pode ser uma instalação
+# em uso, com a API key preenchida — e um "RUN sed" depois do COPY não
+# adiantaria, já que a camada do COPY guarda o arquivo original. Sem ele a
+# imagem usa os padrões do código, e tudo que importa vem por CRIADOR_*. Para
+# ajustar MODELOS ou RETRY num container, monte o seu:
+#     -v ./meu-config.yml:/app/backend/config.yml:ro
+backend/config.yml
 backend/.env
 backend/procedimentos
 backend/execucao.log*
